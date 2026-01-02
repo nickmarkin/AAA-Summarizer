@@ -44,4 +44,6 @@ urlpatterns = [
     path('reports/points/', views.db_export_points, name='db_export_points'),
     path('reports/faculty/', views.db_select_faculty, name='db_select_faculty'),
     path('reports/faculty/export/', views.db_export_faculty, name='db_export_faculty'),
+    path('reports/activities/', views.db_select_activities, name='db_select_activities'),
+    path('reports/activities/export/', views.db_export_activities, name='db_export_activities'),
 ]

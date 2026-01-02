@@ -734,15 +734,20 @@ def departmental_update(request):
             academic_year=academic_year,
         )
 
-        # Update the field
-        if field == 'mytip_count':
+        # Handle CCC membership (on FacultyMember model, persists across years)
+        if field == 'is_ccc_member':
+            faculty.is_ccc_member = bool(value)
+            faculty.save()
+        # Update departmental data fields
+        elif field == 'mytip_count':
             value = min(int(value), 20)  # Enforce max
+            setattr(dept_data, field, value)
+            dept_data.save()
         elif field in ['new_innovations', 'mytip_winner', 'teaching_top_25',
                        'teaching_65_25', 'teacher_of_year', 'honorable_mention']:
             value = bool(value)
-
-        setattr(dept_data, field, value)
-        dept_data.save()
+            setattr(dept_data, field, value)
+            dept_data.save()
 
         return JsonResponse({
             'success': True,
@@ -994,3 +999,105 @@ def db_export_faculty(request):
     except Exception as e:
         messages.error(request, f'Error generating report: {str(e)}')
         return redirect('db_select_faculty')
+
+
+def db_select_activities(request):
+    """Select activity types to export from database."""
+    year_code = request.GET.get('year', '')
+    if year_code:
+        academic_year = get_object_or_404(AcademicYear, year_code=year_code)
+    else:
+        academic_year = AcademicYear.get_current()
+
+    # Build activity index from all FacultySurveyData records
+    activity_index = {}
+    survey_data = FacultySurveyData.objects.filter(academic_year=academic_year)
+
+    for sd in survey_data:
+        activities = sd.activities_json or {}
+        for activity_key, activity_list in activities.items():
+            if activity_key not in activity_index:
+                activity_index[activity_key] = []
+            # Add faculty info to each activity
+            for activity in activity_list:
+                activity_with_faculty = activity.copy()
+                activity_with_faculty['faculty_name'] = sd.faculty.display_name
+                activity_with_faculty['faculty_email'] = sd.faculty.email
+                activity_index[activity_key].append(activity_with_faculty)
+
+    # Get activity types with data
+    activity_types = parser.get_activity_types_with_data(activity_index)
+
+    # Group by category
+    categories = {}
+    for act in activity_types:
+        cat = act['category']
+        if cat not in categories:
+            categories[cat] = []
+        categories[cat].append(act)
+
+    years = AcademicYear.objects.all()
+
+    return render(request, 'reports/select_activities.html', {
+        'categories': categories,
+        'academic_year': academic_year,
+        'years': years,
+    })
+
+
+@require_POST
+def db_export_activities(request):
+    """Export selected activity reports from database."""
+    year_code = request.POST.get('year_code', '')
+    if year_code:
+        academic_year = get_object_or_404(AcademicYear, year_code=year_code)
+    else:
+        academic_year = AcademicYear.get_current()
+
+    selected_types = request.POST.getlist('activities')
+    output_format = request.POST.get('format', 'pdf')
+    sort_by = request.POST.get('sort', 'faculty')
+
+    if not selected_types:
+        messages.error(request, 'Please select at least one activity type.')
+        return redirect('db_select_activities')
+
+    try:
+        # Build activity index from database
+        activity_index = {}
+        survey_data = FacultySurveyData.objects.filter(academic_year=academic_year)
+
+        for sd in survey_data:
+            activities = sd.activities_json or {}
+            for activity_key, activity_list in activities.items():
+                if activity_key not in activity_index:
+                    activity_index[activity_key] = []
+                for activity in activity_list:
+                    activity_with_faculty = activity.copy()
+                    activity_with_faculty['faculty_name'] = sd.faculty.display_name
+                    activity_with_faculty['faculty_email'] = sd.faculty.email
+                    activity_index[activity_key].append(activity_with_faculty)
+
+        # Generate combined activity report
+        md_content = reports.generate_combined_activity_report(activity_index, selected_types, sort_by)
+        filename = f'activities_AY_{academic_year.year_code}'
+
+        if output_format == 'md':
+            response = HttpResponse(md_content, content_type='text/markdown')
+            response['Content-Disposition'] = f'attachment; filename="{filename}.md"'
+            return response
+        else:
+            pdf_bytes = pdf_generator.markdown_to_pdf(md_content)
+            if pdf_bytes:
+                response = HttpResponse(pdf_bytes, content_type='application/pdf')
+                response['Content-Disposition'] = f'attachment; filename="{filename}.pdf"'
+                return response
+            else:
+                messages.warning(request, 'PDF generation failed. Downloading as Markdown.')
+                response = HttpResponse(md_content, content_type='text/markdown')
+                response['Content-Disposition'] = f'attachment; filename="{filename}.md"'
+                return response
+
+    except Exception as e:
+        messages.error(request, f'Error generating report: {str(e)}')
+        return redirect('db_select_activities')

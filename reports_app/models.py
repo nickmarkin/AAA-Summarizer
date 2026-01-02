@@ -385,6 +385,11 @@ class DepartmentalData(models.Model):
         return total
 
     @property
+    def ccc_points(self):
+        """Calculate CCC points (from FacultyMember)."""
+        return self.POINT_VALUES['ccc_member'] if self.faculty.is_ccc_member else 0
+
+    @property
     def departmental_total_points(self):
-        """Calculate total departmental points (excluding CCC)."""
-        return self.evaluations_points + self.teaching_awards_points
+        """Calculate total departmental points (including CCC)."""
+        return self.evaluations_points + self.teaching_awards_points + self.ccc_points

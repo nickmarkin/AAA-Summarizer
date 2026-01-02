@@ -46,7 +46,8 @@
     Top 25%: {{ point_values.teaching_top_25|default:2500 }} |
     65-25%: {{ point_values.teaching_65_25|default:1000 }} |
     Teacher of Year: {{ point_values.teacher_of_year|default:7500 }} |
-    Hon. Mention: {{ point_values.honorable_mention|default:5000 }}
+    Hon. Mention: {{ point_values.honorable_mention|default:5000 }} |
+    CCC Member: {{ point_values.ccc_member|default:1000 }}
 </p>
 
 <table class="dept-table">
@@ -55,6 +56,7 @@
             <th rowspan="2" style="text-align: left;">Faculty</th>
             <th colspan="3">Evaluations</th>
             <th colspan="4">Teaching Awards</th>
+            <th rowspan="2">CCC</th>
             <th rowspan="2">Dept Total</th>
         </tr>
         <tr>
@@ -72,7 +74,6 @@
         <tr data-email="{{ d.faculty.email }}">
             <td style="text-align: left;">
                 <a href="{% url 'faculty_detail' d.faculty.email %}">{{ d.faculty.display_name }}</a>
-                {% if d.faculty.is_ccc_member %}<span class="badge badge-info" style="margin-left: 5px;">CCC</span>{% endif %}
             </td>
             <td>
                 <input type="checkbox" class="dept-checkbox" data-field="new_innovations"
@@ -102,11 +103,15 @@
                 <input type="checkbox" class="dept-checkbox" data-field="honorable_mention"
                        {% if d.honorable_mention %}checked{% endif %}>
             </td>
+            <td>
+                <input type="checkbox" class="dept-checkbox" data-field="is_ccc_member"
+                       {% if d.faculty.is_ccc_member %}checked{% endif %}>
+            </td>
             <td class="points-cell" data-points-cell>{{ d.departmental_total_points }}</td>
         </tr>
         {% empty %}
         <tr>
-            <td colspan="9" style="text-align: center; color: #666;">
+            <td colspan="10" style="text-align: center; color: #666;">
                 No faculty data. <a href="{% url 'import_survey' %}">Import survey data</a> first.
             </td>
         </tr>

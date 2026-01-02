@@ -1,0 +1,116 @@
+{% extends 'base.html' %}
+
+{% block title %}Select Activities - Academic Achievement Summarizer{% endblock %}
+
+{% block content %}
+<div class="nav">
+    <a href="{% url 'index' %}">Dashboard</a>
+    <a href="{% url 'roster' %}">Faculty Roster</a>
+    <a href="{% url 'import_survey' %}">Import Survey</a>
+    <a href="{% url 'departmental_data' %}">Departmental Data</a>
+    <a href="{% url 'reports_dashboard' %}" class="active">Reports</a>
+</div>
+
+<h1>Select Activity Types</h1>
+<p class="subtitle">Choose which activity types to include in the report</p>
+
+<div class="actions" style="margin-bottom: 15px;">
+    <form method="get" style="display: inline;">
+        <label>Academic Year:</label>
+        <select name="year" onchange="this.form.submit()">
+            {% for year in years %}
+            <option value="{{ year.year_code }}" {% if year.year_code == academic_year.year_code %}selected{% endif %}>
+                AY {{ year.year_code }}{% if year.is_current %} (Current){% endif %}
+            </option>
+            {% endfor %}
+        </select>
+    </form>
+</div>
+
+<form method="post" action="{% url 'db_export_activities' %}">
+    {% csrf_token %}
+    <input type="hidden" name="year_code" value="{{ academic_year.year_code }}">
+
+    <div class="actions">
+        <button type="button" onclick="selectAll()" class="btn btn-secondary">Select All</button>
+        <button type="button" onclick="deselectAll()" class="btn btn-secondary">Deselect All</button>
+        <span style="margin-left: 20px;" id="selection-count">0 selected</span>
+    </div>
+
+    {% for category, activities in categories.items %}
+    <div class="category-section">
+        <div class="category-header">
+            {{ category }}
+            <button type="button" onclick="selectCategory('{{ category }}')" style="float: right; background: transparent; border: 1px solid white; color: white; padding: 2px 8px; border-radius: 3px; cursor: pointer; font-size: 12px;">Select All</button>
+        </div>
+        <div class="category-items">
+            {% for act in activities %}
+            <div class="checkbox-item">
+                <input type="checkbox" name="activities" value="{{ act.key }}" id="act_{{ forloop.parentloop.counter }}_{{ forloop.counter }}" data-category="{{ category }}" onchange="updateCount()">
+                <label for="act_{{ forloop.parentloop.counter }}_{{ forloop.counter }}">
+                    {{ act.display_name }}
+                </label>
+                <span class="points">{{ act.count }} entries</span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% empty %}
+    <div class="card" style="text-align: center; padding: 40px;">
+        <p style="color: #666;">No activity data found for this academic year.</p>
+        <p><a href="{% url 'import_survey' %}">Import survey data</a> to see activities.</p>
+    </div>
+    {% endfor %}
+
+    {% if categories %}
+    <h2>Export Options</h2>
+
+    <div class="form-group">
+        <label for="format">Output Format</label>
+        <select name="format" id="format">
+            <option value="pdf">PDF</option>
+            <option value="md">Markdown</option>
+        </select>
+    </div>
+
+    <div class="form-group">
+        <label for="sort">Sort By</label>
+        <select name="sort" id="sort">
+            <option value="faculty">Faculty Name</option>
+            <option value="date">Date</option>
+            <option value="points">Points</option>
+        </select>
+    </div>
+
+    <button type="submit" class="btn btn-success">Export Selected Activities</button>
+    {% endif %}
+</form>
+
+<div style="margin-top: 20px;">
+    <a href="{% url 'reports_dashboard' %}" class="btn btn-secondary">Back to Reports</a>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function selectAll() {
+    document.querySelectorAll('input[name="activities"]').forEach(cb => cb.checked = true);
+    updateCount();
+}
+
+function deselectAll() {
+    document.querySelectorAll('input[name="activities"]').forEach(cb => cb.checked = false);
+    updateCount();
+}
+
+function selectCategory(category) {
+    document.querySelectorAll(`input[data-category="${category}"]`).forEach(cb => cb.checked = true);
+    updateCount();
+}
+
+function updateCount() {
+    const count = document.querySelectorAll('input[name="activities"]:checked').length;
+    document.getElementById('selection-count').textContent = count + ' selected';
+}
+</script>
+{% endblock %}
