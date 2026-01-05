@@ -406,22 +406,39 @@ def select_year(request):
 def create_year(request):
     """Create a new academic year."""
     from datetime import date
+    import re
 
     if request.method == 'POST':
         year_code = request.POST.get('year_code', '').strip()
 
-        # Validate format (e.g., "24-25")
-        if not year_code or len(year_code) != 5 or year_code[2] != '-':
-            messages.error(request, 'Invalid year format. Use format like "24-25".')
+        if not year_code or '-' not in year_code:
+            messages.error(request, 'Invalid year format. Use format like "24-25" or "2024-2025".')
             return redirect('year_list')
 
         try:
-            start_yy = int(year_code[:2])
-            end_yy = int(year_code[3:])
+            # Parse year code - handle both "24-25" and "2024-2025" formats
+            parts = year_code.split('-')
+            if len(parts) != 2:
+                raise ValueError("Invalid format")
 
-            # Determine full years (assume 2000s)
-            start_year = 2000 + start_yy
-            end_year = 2000 + end_yy
+            start_part = parts[0].strip()
+            end_part = parts[1].strip()
+
+            # Parse start year
+            if len(start_part) == 2:
+                start_year = 2000 + int(start_part)
+            elif len(start_part) == 4:
+                start_year = int(start_part)
+            else:
+                raise ValueError("Invalid start year")
+
+            # Parse end year
+            if len(end_part) == 2:
+                end_year = 2000 + int(end_part)
+            elif len(end_part) == 4:
+                end_year = int(end_part)
+            else:
+                raise ValueError("Invalid end year")
 
             # Validate sequence
             if end_year != start_year + 1:
@@ -444,7 +461,7 @@ def create_year(request):
                 messages.info(request, f'Academic year {year} already exists.')
 
         except ValueError:
-            messages.error(request, 'Invalid year format. Use format like "24-25".')
+            messages.error(request, 'Invalid year format. Use format like "24-25" or "2024-2025".')
 
     return redirect('year_list')
 

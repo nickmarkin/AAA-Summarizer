@@ -20,10 +20,10 @@ class AcademicYear(models.Model):
     Format: "24-25" for the 2024-2025 academic year.
     """
     year_code = models.CharField(
-        max_length=5,
+        max_length=12,
         unique=True,
         primary_key=True,
-        help_text='Format: "24-25" for 2024-2025 academic year'
+        help_text='Format: "24-25" or "2024-2025" for academic year'
     )
     start_date = models.DateField(help_text='July 1 of start year')
     end_date = models.DateField(help_text='June 30 of end year')
