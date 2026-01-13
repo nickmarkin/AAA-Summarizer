@@ -79,15 +79,21 @@
                 <form method="post" action="{% url 'survey:campaign_send' pk=campaign.pk %}">
                     {% csrf_token %}
                     <button type="submit" class="btn btn-primary w-100"
-                            {% if not campaign.is_active %}disabled{% endif %}>
+                            {% if not campaign.is_active or stats.not_emailed == 0 %}disabled{% endif %}>
                         <i class="bi bi-envelope"></i> Send Invitations
+                        {% if stats.not_emailed > 0 %}
+                            <span class="badge bg-light text-primary ms-1">{{ stats.not_emailed }}</span>
+                        {% endif %}
                     </button>
                 </form>
                 <form method="post" action="{% url 'survey:campaign_remind' pk=campaign.pk %}">
                     {% csrf_token %}
                     <button type="submit" class="btn btn-warning w-100"
-                            {% if not campaign.is_active %}disabled{% endif %}>
+                            {% if not campaign.is_active or stats.not_submitted == 0 %}disabled{% endif %}>
                         <i class="bi bi-bell"></i> Send Reminders
+                        {% if stats.not_submitted > 0 %}
+                            <span class="badge bg-light text-warning ms-1">{{ stats.not_submitted }}</span>
+                        {% endif %}
                     </button>
                 </form>
                 <a href="{% url 'survey:campaign_edit' pk=campaign.pk %}" class="btn btn-outline-secondary">
@@ -107,6 +113,49 @@
                 <dd>{{ campaign.closes_at|date:"M j, Y g:i A" }}</dd>
             </dl>
         </div>
+    </div>
+</div>
+
+<!-- Faculty Management -->
+<div class="card mb-4">
+    <div class="d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">
+            <a class="text-decoration-none" data-bs-toggle="collapse" href="#facultyManagement" role="button">
+                Manage Faculty <i class="bi bi-chevron-down"></i>
+            </a>
+        </h5>
+        <span class="text-muted">{{ invited_emails|length }} of {{ all_faculty|length }} active faculty included</span>
+    </div>
+
+    <div class="collapse mt-3" id="facultyManagement">
+        <form method="post" action="{% url 'survey:campaign_update_faculty' pk=campaign.pk %}">
+            {% csrf_token %}
+            <div class="mb-3">
+                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="selectAllFaculty(true)">Select All</button>
+                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="selectAllFaculty(false)">Deselect All</button>
+            </div>
+            <div class="row">
+                {% for f in all_faculty %}
+                <div class="col-md-4 col-lg-3 mb-2">
+                    <div class="form-check">
+                        <input class="form-check-input faculty-checkbox" type="checkbox" name="faculty" value="{{ f.email }}" id="fac_{{ forloop.counter }}"
+                            {% if f.email in invited_emails %}checked{% endif %}>
+                        <label class="form-check-label" for="fac_{{ forloop.counter }}" style="font-size: 13px;">
+                            {{ f.last_name }}, {{ f.first_name }}
+                        </label>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            <div class="mt-3">
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-check-lg"></i> Update Faculty List
+                </button>
+                <span class="text-muted ms-2" style="font-size: 13px;">
+                    Note: Faculty with submitted or in-progress surveys cannot be removed.
+                </span>
+            </div>
+        </form>
     </div>
 </div>
 
@@ -204,6 +253,13 @@
 
 {% block scripts %}
 <script>
+// Faculty management
+function selectAllFaculty(checked) {
+    document.querySelectorAll('.faculty-checkbox').forEach(cb => {
+        cb.checked = checked;
+    });
+}
+
 document.querySelectorAll('[data-filter]').forEach(btn => {
     btn.addEventListener('click', function() {
         const filter = this.dataset.filter;

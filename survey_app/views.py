@@ -125,6 +125,10 @@ def campaign_detail(request, pk):
     in_progress = invitations.filter(status='in_progress')
     submitted = invitations.filter(status='submitted')
 
+    # Get all active faculty for management section
+    all_faculty = FacultyMember.objects.filter(is_active=True).order_by('last_name', 'first_name')
+    invited_emails = set(invitations.values_list('faculty__email', flat=True))
+
     context = {
         'campaign': campaign,
         'invitations': invitations,
@@ -132,6 +136,8 @@ def campaign_detail(request, pk):
         'in_progress': in_progress,
         'submitted': submitted,
         'stats': campaign.submission_stats,
+        'all_faculty': all_faculty,
+        'invited_emails': invited_emails,
     }
     return render(request, 'survey/admin/campaign_detail.html', context)
 
@@ -145,6 +151,13 @@ def campaign_edit(request, pk):
         campaign.opens_at = request.POST.get('opens_at', campaign.opens_at)
         campaign.closes_at = request.POST.get('closes_at', campaign.closes_at)
         campaign.is_active = request.POST.get('is_active') == 'on'
+
+        # Email customization
+        campaign.email_from_name = request.POST.get('email_from_name', '').strip()
+        campaign.email_from_address = request.POST.get('email_from_address', '').strip()
+        campaign.email_subject = request.POST.get('email_subject', '').strip()
+        campaign.email_body = request.POST.get('email_body', '').strip()
+
         campaign.save()
 
         messages.success(request, 'Campaign updated successfully')
@@ -154,6 +167,68 @@ def campaign_edit(request, pk):
         'campaign': campaign,
     }
     return render(request, 'survey/admin/campaign_edit.html', context)
+
+
+@require_POST
+def campaign_update_faculty(request, pk):
+    """Update which faculty are included in a campaign."""
+    campaign = get_object_or_404(SurveyCampaign, pk=pk)
+
+    # Get selected faculty emails from form
+    selected_emails = set(request.POST.getlist('faculty'))
+
+    # Get current invitations
+    current_invitations = {
+        inv.faculty.email: inv
+        for inv in campaign.invitations.select_related('faculty')
+    }
+    current_emails = set(current_invitations.keys())
+
+    # Determine additions and removals
+    to_add = selected_emails - current_emails
+    to_remove = current_emails - selected_emails
+
+    added_count = 0
+    removed_count = 0
+    skipped_count = 0
+
+    # Add new invitations
+    for email in to_add:
+        faculty = FacultyMember.objects.filter(email=email).first()
+        if faculty:
+            SurveyInvitation.objects.create(campaign=campaign, faculty=faculty)
+            added_count += 1
+
+    # Remove invitations (only if not submitted or in progress with data)
+    for email in to_remove:
+        inv = current_invitations.get(email)
+        if inv:
+            # Don't remove submitted surveys
+            if inv.status == 'submitted':
+                skipped_count += 1
+                continue
+            # Don't remove in-progress surveys that have response data
+            if inv.status == 'in_progress' and hasattr(inv, 'response'):
+                skipped_count += 1
+                continue
+            inv.delete()
+            removed_count += 1
+
+    # Build feedback message
+    msg_parts = []
+    if added_count:
+        msg_parts.append(f'{added_count} added')
+    if removed_count:
+        msg_parts.append(f'{removed_count} removed')
+    if skipped_count:
+        msg_parts.append(f'{skipped_count} kept (have data)')
+
+    if msg_parts:
+        messages.success(request, 'Faculty updated: ' + ', '.join(msg_parts))
+    else:
+        messages.info(request, 'No changes made')
+
+    return redirect('survey:campaign_detail', pk=pk)
 
 
 def campaign_send_invitations(request, pk):
@@ -183,21 +258,25 @@ def campaign_send_invitations(request, pk):
         else:
             # Send to all pending
             pending = campaign.invitations.filter(email_sent_at__isnull=True)
+            pending_count = pending.count()
 
-            sent_count = 0
-            failed_count = 0
+            if pending_count == 0:
+                messages.info(request, 'No pending invitations to send. All faculty have already been emailed.')
+            else:
+                sent_count = 0
+                failed_count = 0
 
-            for invitation in pending:
-                success = _send_invitation_email(invitation)
-                if success:
-                    sent_count += 1
-                else:
-                    failed_count += 1
+                for invitation in pending:
+                    success = _send_invitation_email(invitation)
+                    if success:
+                        sent_count += 1
+                    else:
+                        failed_count += 1
 
-            if sent_count > 0:
-                messages.success(request, f'Sent {sent_count} invitation emails')
-            if failed_count > 0:
-                messages.warning(request, f'{failed_count} emails failed to send')
+                if sent_count > 0:
+                    messages.success(request, f'Sent {sent_count} invitation emails')
+                if failed_count > 0:
+                    messages.warning(request, f'{failed_count} emails failed to send')
 
     return redirect('survey:campaign_detail', pk=pk)
 
@@ -691,32 +770,57 @@ def _send_invitation_email(invitation):
     from django.urls import reverse
 
     try:
+        campaign = invitation.campaign
+        faculty = invitation.faculty
+
+        # Build survey URL
         survey_url = settings.SITE_URL if hasattr(settings, 'SITE_URL') else 'http://localhost:8000'
         survey_url += reverse('survey:survey_landing', kwargs={'token': invitation.token})
 
-        subject = f"{settings.SURVEY_EMAIL_SUBJECT_PREFIX}Academic Achievement Survey - {invitation.campaign.quarter}"
+        # Format deadline
+        deadline = campaign.closes_at.strftime('%B %d, %Y at %I:%M %p')
 
-        message = f"""
-Dear {invitation.faculty.first_name} {invitation.faculty.last_name},
+        # Use campaign-specific settings or defaults
+        if campaign.email_from_name and campaign.email_from_address:
+            from_email = f"{campaign.email_from_name} <{campaign.email_from_address}>"
+        elif campaign.email_from_address:
+            from_email = campaign.email_from_address
+        else:
+            from_email = settings.DEFAULT_FROM_EMAIL
 
-You are invited to complete the Academic Achievement Survey for {invitation.campaign.quarter}.
+        if campaign.email_subject:
+            subject = campaign.email_subject
+        else:
+            subject = f"{settings.SURVEY_EMAIL_SUBJECT_PREFIX}Academic Achievement Survey - {campaign.quarter}"
+
+        if campaign.email_body:
+            # Use custom body with placeholder replacement
+            message = campaign.email_body
+            message = message.replace('{first_name}', faculty.first_name)
+            message = message.replace('{last_name}', faculty.last_name)
+            message = message.replace('{survey_link}', survey_url)
+            message = message.replace('{deadline}', deadline)
+        else:
+            # Default message
+            message = f"""Dear {faculty.first_name} {faculty.last_name},
+
+You are invited to complete the Academic Achievement Survey for {campaign.quarter}.
 
 Please click the link below to begin:
 {survey_url}
 
-Deadline: {invitation.campaign.closes_at.strftime('%B %d, %Y at %I:%M %p')}
+Deadline: {deadline}
 
 This link is unique to you. Please do not share it.
 
 Thank you,
-UNMC Department of Anesthesiology
-"""
+UNMC Department of Anesthesiology"""
 
         send_mail(
             subject=subject,
             message=message,
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[invitation.faculty.email],
+            from_email=from_email,
+            recipient_list=[faculty.email],
             fail_silently=False,
         )
 
@@ -728,7 +832,7 @@ UNMC Department of Anesthesiology
         EmailLog.objects.create(
             invitation=invitation,
             email_type='invitation',
-            recipient=invitation.faculty.email,
+            recipient=faculty.email,
             subject=subject,
             status='sent',
         )
@@ -755,32 +859,42 @@ def _send_reminder_email(invitation):
     from django.urls import reverse
 
     try:
+        campaign = invitation.campaign
+        faculty = invitation.faculty
+
         survey_url = settings.SITE_URL if hasattr(settings, 'SITE_URL') else 'http://localhost:8000'
         survey_url += reverse('survey:survey_landing', kwargs={'token': invitation.token})
 
-        subject = f"{settings.SURVEY_EMAIL_SUBJECT_PREFIX}REMINDER: Academic Achievement Survey - {invitation.campaign.quarter}"
+        # Use campaign-specific from address or default
+        if campaign.email_from_name and campaign.email_from_address:
+            from_email = f"{campaign.email_from_name} <{campaign.email_from_address}>"
+        elif campaign.email_from_address:
+            from_email = campaign.email_from_address
+        else:
+            from_email = settings.DEFAULT_FROM_EMAIL
+
+        subject = f"{settings.SURVEY_EMAIL_SUBJECT_PREFIX}REMINDER: Academic Achievement Survey - {campaign.quarter}"
 
         status_msg = "not yet started" if invitation.status == 'pending' else "in progress"
+        deadline = campaign.closes_at.strftime('%B %d, %Y at %I:%M %p')
 
-        message = f"""
-Dear {invitation.faculty.first_name} {invitation.faculty.last_name},
+        message = f"""Dear {faculty.first_name} {faculty.last_name},
 
-This is a reminder that your Academic Achievement Survey for {invitation.campaign.quarter} is {status_msg}.
+This is a reminder that your Academic Achievement Survey for {campaign.quarter} is {status_msg}.
 
 Please click the link below to complete your submission:
 {survey_url}
 
-Deadline: {invitation.campaign.closes_at.strftime('%B %d, %Y at %I:%M %p')}
+Deadline: {deadline}
 
 Thank you,
-UNMC Department of Anesthesiology
-"""
+UNMC Department of Anesthesiology"""
 
         send_mail(
             subject=subject,
             message=message,
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[invitation.faculty.email],
+            from_email=from_email,
+            recipient_list=[faculty.email],
             fail_silently=False,
         )
 
@@ -788,7 +902,7 @@ UNMC Department of Anesthesiology
         EmailLog.objects.create(
             invitation=invitation,
             email_type='reminder',
-            recipient=invitation.faculty.email,
+            recipient=faculty.email,
             subject=subject,
             status='sent',
         )
@@ -813,12 +927,22 @@ def _send_confirmation_email(invitation):
     from django.conf import settings
 
     try:
-        subject = f"{settings.SURVEY_EMAIL_SUBJECT_PREFIX}Survey Submitted - {invitation.campaign.quarter}"
+        campaign = invitation.campaign
+        faculty = invitation.faculty
 
-        message = f"""
-Dear {invitation.faculty.first_name} {invitation.faculty.last_name},
+        # Use campaign-specific from address or default
+        if campaign.email_from_name and campaign.email_from_address:
+            from_email = f"{campaign.email_from_name} <{campaign.email_from_address}>"
+        elif campaign.email_from_address:
+            from_email = campaign.email_from_address
+        else:
+            from_email = settings.DEFAULT_FROM_EMAIL
 
-Thank you for completing the Academic Achievement Survey for {invitation.campaign.quarter}.
+        subject = f"{settings.SURVEY_EMAIL_SUBJECT_PREFIX}Survey Submitted - {campaign.quarter}"
+
+        message = f"""Dear {faculty.first_name} {faculty.last_name},
+
+Thank you for completing the Academic Achievement Survey for {campaign.quarter}.
 
 Your submission has been recorded.
 
@@ -827,21 +951,20 @@ Submitted: {invitation.submitted_at.strftime('%B %d, %Y at %I:%M %p')}
 If you have any questions, please contact the department.
 
 Thank you,
-UNMC Department of Anesthesiology
-"""
+UNMC Department of Anesthesiology"""
 
         send_mail(
             subject=subject,
             message=message,
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[invitation.faculty.email],
+            from_email=from_email,
+            recipient_list=[faculty.email],
             fail_silently=False,
         )
 
         EmailLog.objects.create(
             invitation=invitation,
             email_type='confirmation',
-            recipient=invitation.faculty.email,
+            recipient=faculty.email,
             subject=subject,
             status='sent',
         )

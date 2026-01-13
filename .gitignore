@@ -45,3 +45,4 @@ deployment-package.zip
 
 # Claude
 .claude/
+sent_emails/

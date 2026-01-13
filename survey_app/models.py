@@ -28,9 +28,11 @@ class SurveyCampaign(models.Model):
     campaign status, dates, and reminder scheduling.
     """
     QUARTER_CHOICES = [
-        ('Q1-Q2', 'Q1-Q2 (Jul-Dec)'),
+        ('Q1', 'Q1 (Jul-Sep)'),
+        ('Q2', 'Q2 (Oct-Dec)'),
         ('Q3', 'Q3 (Jan-Mar)'),
         ('Q4', 'Q4 (Apr-Jun)'),
+        ('Q1-Q2', 'Q1-Q2 Combined'),  # Keep for existing campaigns
     ]
 
     academic_year = models.ForeignKey(
@@ -52,6 +54,30 @@ class SurveyCampaign(models.Model):
     is_active = models.BooleanField(
         default=True,
         help_text='Inactive campaigns cannot accept submissions'
+    )
+
+    # Email customization
+    email_from_name = models.CharField(
+        max_length=100,
+        blank=True,
+        default='',
+        help_text='Sender name (e.g., "Nick Markin")'
+    )
+    email_from_address = models.EmailField(
+        blank=True,
+        default='',
+        help_text='Sender email address'
+    )
+    email_subject = models.CharField(
+        max_length=200,
+        blank=True,
+        default='',
+        help_text='Email subject (leave blank for default)'
+    )
+    email_body = models.TextField(
+        blank=True,
+        default='',
+        help_text='Email body. Use {first_name}, {last_name}, {survey_link}, {deadline} as placeholders.'
     )
 
     # Audit fields
@@ -100,11 +126,15 @@ class SurveyCampaign(models.Model):
         submitted = self.invitations.filter(status='submitted').count()
         in_progress = self.invitations.filter(status='in_progress').count()
         pending = self.invitations.filter(status='pending').count()
+        not_emailed = self.invitations.filter(email_sent_at__isnull=True).count()
+        not_submitted = self.invitations.exclude(status='submitted').count()
         return {
             'total': total,
             'submitted': submitted,
             'in_progress': in_progress,
             'pending': pending,
+            'not_emailed': not_emailed,
+            'not_submitted': not_submitted,
             'completion_rate': (submitted / total * 100) if total > 0 else 0
         }
 

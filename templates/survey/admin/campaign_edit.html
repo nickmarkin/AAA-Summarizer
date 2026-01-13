@@ -56,6 +56,52 @@
 
                 <hr>
 
+                <h5 class="mb-3">Email Settings</h5>
+
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label for="email_from_name" class="form-label">From Name</label>
+                        <input type="text" name="email_from_name" id="email_from_name"
+                               class="form-control" placeholder="e.g., Nick Markin"
+                               value="{{ campaign.email_from_name }}">
+                    </div>
+                    <div class="col-md-6">
+                        <label for="email_from_address" class="form-label">From Email</label>
+                        <input type="email" name="email_from_address" id="email_from_address"
+                               class="form-control" placeholder="e.g., nick.markin@unmc.edu"
+                               value="{{ campaign.email_from_address }}">
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label for="email_subject" class="form-label">Subject</label>
+                    <input type="text" name="email_subject" id="email_subject"
+                           class="form-control"
+                           placeholder="Leave blank for default: [UNMC Anesthesiology] Academic Achievement Survey - {{ campaign.quarter }}"
+                           value="{{ campaign.email_subject }}">
+                </div>
+
+                <div class="mb-3">
+                    <label for="email_body" class="form-label">Message Body</label>
+                    <textarea name="email_body" id="email_body" class="form-control" rows="10"
+                              placeholder="Leave blank for default message. Use placeholders: {first_name}, {last_name}, {survey_link}, {deadline}">{{ campaign.email_body }}</textarea>
+                    <div class="form-text">
+                        <strong>Available placeholders:</strong>
+                        <code>{first_name}</code>, <code>{last_name}</code>, <code>{survey_link}</code>, <code>{deadline}</code>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="loadDefaultEmail()">
+                        <i class="bi bi-arrow-counterclockwise"></i> Load Default Template
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-info" onclick="previewEmail()">
+                        <i class="bi bi-eye"></i> Preview
+                    </button>
+                </div>
+
+                <hr>
+
                 <div class="d-flex justify-content-between">
                     <a href="{% url 'survey:campaign_detail' pk=campaign.pk %}" class="btn btn-secondary">
                         Cancel
@@ -82,4 +128,63 @@
         </div>
     </div>
 </div>
+
+<!-- Preview Modal -->
+<div class="modal fade" id="previewModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Email Preview</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-2"><strong>From:</strong> <span id="previewFrom"></span></div>
+                <div class="mb-2"><strong>Subject:</strong> <span id="previewSubject"></span></div>
+                <hr>
+                <pre id="previewBody" style="white-space: pre-wrap; font-family: inherit;"></pre>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const defaultEmailBody = `Dear {first_name} {last_name},
+
+You are invited to complete the Academic Achievement Survey for {{ campaign.quarter }}.
+
+Please click the link below to begin:
+{survey_link}
+
+Deadline: {deadline}
+
+This link is unique to you. Please do not share it.
+
+Thank you,
+UNMC Department of Anesthesiology`;
+
+function loadDefaultEmail() {
+    document.getElementById('email_body').value = defaultEmailBody;
+}
+
+function previewEmail() {
+    const fromName = document.getElementById('email_from_name').value || 'AVC Survey';
+    const fromEmail = document.getElementById('email_from_address').value || 'noreply@unmc.edu';
+    const subject = document.getElementById('email_subject').value || '[UNMC Anesthesiology] Academic Achievement Survey - {{ campaign.quarter }}';
+    let body = document.getElementById('email_body').value || defaultEmailBody;
+
+    // Replace placeholders with sample values
+    body = body.replace(/{first_name}/g, 'John');
+    body = body.replace(/{last_name}/g, 'Doe');
+    body = body.replace(/{survey_link}/g, 'http://localhost:8000/survey/s/SAMPLE-TOKEN/');
+    body = body.replace(/{deadline}/g, '{{ campaign.closes_at|date:"F j, Y" }} at {{ campaign.closes_at|time:"g:i A" }}');
+
+    document.getElementById('previewFrom').textContent = `${fromName} <${fromEmail}>`;
+    document.getElementById('previewSubject').textContent = subject;
+    document.getElementById('previewBody').textContent = body;
+
+    new bootstrap.Modal(document.getElementById('previewModal')).show();
+}
+</script>
 {% endblock %}

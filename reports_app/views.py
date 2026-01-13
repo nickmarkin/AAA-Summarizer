@@ -489,17 +489,38 @@ def faculty_roster(request):
     if ccc_only:
         faculty = faculty.filter(is_ccc_member=True)
 
-    # Get current campaign and invitation status for each faculty
+    # Get selected academic year
+    selected_year_code = request.session.get('selected_academic_year')
+    if selected_year_code:
+        academic_year = AcademicYear.objects.filter(year_code=selected_year_code).first()
+    if not selected_year_code or not academic_year:
+        academic_year = AcademicYear.get_current()
+
+    # Get all campaigns for this academic year
     from survey_app.models import SurveyInvitation, SurveyCampaign
-    current_campaign = SurveyCampaign.objects.filter(is_active=True).order_by('-opens_at').first()
+    campaigns = SurveyCampaign.objects.filter(
+        academic_year=academic_year
+    ).order_by('quarter')
+
+    # Build invitation status for each faculty for each campaign
+    # Structure: {email: {campaign_id: status}}
     invitation_status = {}
-    if current_campaign:
+    for campaign in campaigns:
         invitations = SurveyInvitation.objects.filter(
-            campaign=current_campaign
+            campaign=campaign
         ).select_related('faculty')
         for inv in invitations:
-            # Use faculty email as key (it's the primary key)
-            invitation_status[inv.faculty.email] = inv.status
+            if inv.faculty.email not in invitation_status:
+                invitation_status[inv.faculty.email] = {}
+            invitation_status[inv.faculty.email][campaign.id] = inv.status
+
+    # Check which faculty have survey data (from imports or submissions)
+    # Use dict for template compatibility with get_item filter
+    faculty_with_data = {
+        email: True for email in FacultySurveyData.objects.filter(
+            academic_year=academic_year
+        ).values_list('faculty__email', flat=True)
+    }
 
     return render(request, 'roster/list.html', {
         'faculty': faculty,
@@ -510,8 +531,10 @@ def faculty_roster(request):
         'current_rank': rank,
         'current_contract': contract,
         'ccc_only': ccc_only,
-        'current_campaign': current_campaign,
+        'academic_year': academic_year,
+        'campaigns': campaigns,
         'invitation_status': invitation_status,
+        'faculty_with_data': faculty_with_data,
     })
 
 

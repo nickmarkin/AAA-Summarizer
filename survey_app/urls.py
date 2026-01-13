@@ -16,6 +16,7 @@ urlpatterns = [
     path('admin/campaigns/create/', views.campaign_create, name='campaign_create'),
     path('admin/campaigns/<int:pk>/', views.campaign_detail, name='campaign_detail'),
     path('admin/campaigns/<int:pk>/edit/', views.campaign_edit, name='campaign_edit'),
+    path('admin/campaigns/<int:pk>/faculty/', views.campaign_update_faculty, name='campaign_update_faculty'),
     path('admin/campaigns/<int:pk>/send/', views.campaign_send_invitations, name='campaign_send'),
     path('admin/campaigns/<int:pk>/remind/', views.campaign_send_reminders, name='campaign_remind'),
     path('admin/invitations/<int:pk>/unlock/', views.invitation_unlock, name='invitation_unlock'),

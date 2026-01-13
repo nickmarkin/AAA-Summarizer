@@ -433,7 +433,7 @@
                             <div class="type-choice">
                                 <input type="radio" name="${prefix}_${field.name}"
                                        id="${prefix}_${field.name}_${val}" value="${val}"
-                                       onchange="showEntryDetails('${prefix}')">
+                                       onchange="handleTypeSelection('${prefix}', '${val}')">
                                 <label for="${prefix}_${field.name}_${val}">${label}</label>
                             </div>
                         `;
@@ -452,8 +452,9 @@
             nonRadioFields.forEach(field => {
                 const requiredStar = field.required ? ' <span class="text-danger">*</span>' : '';
                 const requiredClass = field.required ? ' data-required="true"' : '';
+                const hideForTypes = field.hide_for_types ? ` data-hide-for-types="${field.hide_for_types.join(',')}"` : '';
 
-                html += `<div class="mb-3">`;
+                html += `<div class="mb-3 field-container" data-field="${field.name}"${hideForTypes}>`;
                 html += `<label class="form-label">${field.label}${requiredStar}</label>`;
 
                 if (field.type === 'text') {
@@ -481,6 +482,38 @@
             if (detailsEl) {
                 detailsEl.style.display = 'block';
             }
+        }
+
+        function handleTypeSelection(prefix, selectedType) {
+            // Show entry details
+            showEntryDetails(prefix);
+
+            // Get the entry card
+            const entryCard = document.getElementById(`entry_${prefix}`);
+            if (!entryCard) return;
+
+            // Show/hide fields based on hide_for_types
+            entryCard.querySelectorAll('.field-container[data-hide-for-types]').forEach(container => {
+                const hideForTypes = container.getAttribute('data-hide-for-types').split(',');
+                const input = container.querySelector('input, select, textarea');
+
+                if (hideForTypes.includes(selectedType)) {
+                    container.style.display = 'none';
+                    // Clear the value and remove required validation for hidden fields
+                    if (input) {
+                        input.value = '';
+                        input.removeAttribute('data-required');
+                    }
+                } else {
+                    container.style.display = 'block';
+                    // Restore required validation if it was originally required
+                    // (We check the label for the asterisk as a proxy)
+                    const label = container.querySelector('.form-label');
+                    if (label && label.innerHTML.includes('text-danger') && input) {
+                        input.setAttribute('data-required', 'true');
+                    }
+                }
+            });
         }
 
         function handleTriggerChange(subKey, value) {
@@ -578,18 +611,28 @@
                         const prefix = `${sub.key}_${entryIndex}`;
 
                         // Populate fields
+                        let selectedType = null;
                         Object.keys(entry).forEach(fieldName => {
                             const value = entry[fieldName];
                             const radio = document.querySelector(`input[name="${prefix}_${fieldName}"][value="${value}"]`);
                             if (radio) {
                                 radio.checked = true;
-                                // Show details when a type is loaded
-                                showEntryDetails(prefix);
+                                // Track the selected type for hiding fields
+                                if (fieldName === 'type') {
+                                    selectedType = value;
+                                }
                             } else {
                                 const input = document.querySelector(`[name="${prefix}_${fieldName}"]`);
                                 if (input) input.value = value;
                             }
                         });
+
+                        // Apply type selection logic (show details and hide fields for this type)
+                        if (selectedType) {
+                            handleTypeSelection(prefix, selectedType);
+                        } else {
+                            showEntryDetails(prefix);
+                        }
                     });
                 }
             });
@@ -598,6 +641,18 @@
         function attachEventListeners() {
             // Form validation before submit
             document.getElementById('surveyForm').addEventListener('submit', function(e) {
+                // Default unselected trigger questions to "no"
+                config.subsections.forEach(sub => {
+                    const triggerName = `${sub.key}_trigger`;
+                    const selectedTrigger = document.querySelector(`input[name="${triggerName}"]:checked`);
+                    if (!selectedTrigger) {
+                        const noOption = document.querySelector(`input[name="${triggerName}"][value="no"]`);
+                        if (noOption) {
+                            noOption.checked = true;
+                        }
+                    }
+                });
+
                 const errors = [];
 
                 // Check each visible entry for required fields
@@ -608,6 +663,12 @@
                     if (detailsEl && detailsEl.style.display !== 'none') {
                         const requiredFields = card.querySelectorAll('[data-required="true"]');
                         requiredFields.forEach(field => {
+                            // Skip validation for fields in hidden containers
+                            const container = field.closest('.field-container');
+                            if (container && container.style.display === 'none') {
+                                return;
+                            }
+
                             if (!field.value.trim()) {
                                 field.classList.add('is-invalid');
                                 const label = field.closest('.mb-3').querySelector('.form-label').textContent.replace(' *', '');

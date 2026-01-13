@@ -208,8 +208,11 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 EMAIL_BACKEND = os.environ.get(
     'EMAIL_BACKEND',
-    'django.core.mail.backends.console.EmailBackend'  # Dev: prints to console
+    'django.core.mail.backends.filebased.EmailBackend'  # Dev: saves to files
 )
+
+# Directory for email files (only used with filebased backend)
+EMAIL_FILE_PATH = os.environ.get('EMAIL_FILE_PATH', str(BASE_DIR / 'sent_emails'))
 
 # SMTP Configuration (used when EMAIL_BACKEND is smtp)
 EMAIL_HOST = os.environ.get('EMAIL_HOST', 'smtp.gmail.com')
@@ -230,4 +233,4 @@ SURVEY_EMAIL_SUBJECT_PREFIX = os.environ.get(
 )
 
 # Site URL for email links (defaults to localhost for development)
-SITE_URL = os.environ.get('SITE_URL', 'http://localhost:8000')
+SITE_URL = os.environ.get('SITE_URL', 'http://localhost:8001')

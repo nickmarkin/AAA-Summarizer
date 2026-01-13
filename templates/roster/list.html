@@ -45,34 +45,102 @@
     .faculty-card a {
         display: flex;
         align-items: center;
-        padding: 15px 20px;
+        padding: 10px 20px;
         text-decoration: none;
         color: inherit;
+        gap: 0;
+    }
+    .faculty-col {
+        padding: 0 15px;
+        border-right: 1px solid #e9ecef;
+    }
+    .faculty-col:first-child {
+        padding-left: 0;
+    }
+    .faculty-col:last-child {
+        border-right: none;
+        padding-right: 0;
     }
     .faculty-name {
         font-weight: 600;
         color: #212529;
-        min-width: 200px;
+        width: 220px;
+        white-space: nowrap;
     }
     .faculty-email {
         color: #6c757d;
         font-size: 13px;
-        min-width: 220px;
+        width: 200px;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
-    .faculty-info {
-        display: flex;
-        gap: 20px;
-        flex: 1;
+    .faculty-rank {
+        width: 160px;
+        font-size: 14px;
+        color: #495057;
+        white-space: nowrap;
+    }
+    .faculty-division {
+        width: 120px;
         font-size: 14px;
         color: #495057;
     }
-    .faculty-info span {
-        min-width: 100px;
-    }
     .faculty-badges {
         display: flex;
-        gap: 8px;
+        gap: 6px;
         align-items: center;
+        min-width: 200px;
+    }
+    .quarter-badge {
+        padding: 3px 8px;
+        border-radius: 4px;
+        font-size: 11px;
+        font-weight: 500;
+        border: 1px solid;
+    }
+    .quarter-badge.submitted {
+        background: #d4edda;
+        color: #155724;
+        border-color: #c3e6cb;
+    }
+    .quarter-badge.in_progress {
+        background: #fff3cd;
+        color: #856404;
+        border-color: #ffeeba;
+    }
+    .quarter-badge.pending {
+        background: #e9ecef;
+        color: #495057;
+        border-color: #dee2e6;
+    }
+    .quarter-badge.none {
+        background: #fff;
+        color: #adb5bd;
+        border-color: #dee2e6;
+    }
+    .data-indicator {
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: #28a745;
+        margin-left: 4px;
+        flex-shrink: 0;
+    }
+    .roster-header-row {
+        display: flex;
+        align-items: center;
+        padding: 10px 20px;
+        background: #f8f9fa;
+        border-radius: 8px;
+        margin-bottom: 8px;
+    }
+    .roster-header-row .faculty-col {
+        border-right: none;
+        font-size: 11px;
+        font-weight: 600;
+        color: #6c757d;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
     }
     .badge {
         padding: 4px 10px;
@@ -144,36 +212,38 @@
             {% endfor %}
         </select>
 
-        <label>
-            <input type="checkbox" name="ccc" value="1" {% if ccc_only %}checked{% endif %} onchange="this.form.submit()">
-            CCC Only
-        </label>
     </form>
+</div>
+
+<div class="roster-header-row">
+    <span class="faculty-col faculty-name">Name</span>
+    <span class="faculty-col faculty-email">Email</span>
+    <span class="faculty-col faculty-rank">Rank</span>
+    <span class="faculty-col faculty-division">Division</span>
+    <span class="faculty-col faculty-badges">AY {{ academic_year.year_code }} Surveys</span>
 </div>
 
 {% for f in faculty %}
 <div class="faculty-card">
     <a href="{% url 'faculty_detail' f.email %}">
-        <span class="faculty-name">{{ f.display_name }}</span>
-        <span class="faculty-email">{{ f.email }}</span>
-        <span class="faculty-info">
-            <span>{{ f.get_rank_display|default:"-" }}</span>
-            <span>{{ f.get_division_display|default:"-" }}</span>
-        </span>
-        <span class="faculty-badges">
-            {% if f.is_ccc_member %}
-            <span class="badge badge-info">CCC</span>
-            {% endif %}
-            {% if current_campaign %}
-                {% with status=invitation_status|get_item:f.email %}
-                    {% if status == 'submitted' %}
-                        <span class="badge badge-success">Submitted</span>
-                    {% elif status == 'in_progress' %}
-                        <span class="badge badge-warning">In Progress</span>
-                    {% elif status == 'pending' %}
-                        <span class="badge badge-secondary">Pending</span>
-                    {% endif %}
-                {% endwith %}
+        <span class="faculty-col faculty-name">{{ f.display_name }}</span>
+        <span class="faculty-col faculty-email">{{ f.email }}</span>
+        <span class="faculty-col faculty-rank">{{ f.get_rank_display|default:"-" }}</span>
+        <span class="faculty-col faculty-division">{{ f.get_division_display|default:"-" }}</span>
+        <span class="faculty-col faculty-badges">
+            {% with faculty_invites=invitation_status|get_item:f.email %}
+                {% for campaign in campaigns %}
+                    {% with camp_status=faculty_invites|get_item:campaign.id %}
+                        <span class="quarter-badge {% if camp_status == 'submitted' %}submitted{% elif camp_status == 'in_progress' %}in_progress{% elif camp_status == 'pending' %}pending{% else %}none{% endif %}" title="{{ campaign.quarter }}: {% if camp_status %}{{ camp_status }}{% else %}not invited{% endif %}">
+                            {{ campaign.quarter }}{% if camp_status == 'submitted' %} ✓{% endif %}
+                        </span>
+                    {% endwith %}
+                {% empty %}
+                    <span class="text-muted" style="font-size: 12px;">No campaigns</span>
+                {% endfor %}
+            {% endwith %}
+            {% if faculty_with_data|get_item:f.email %}
+                <span class="data-indicator" title="Has survey data"></span>
             {% endif %}
         </span>
     </a>
