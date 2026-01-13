@@ -498,7 +498,8 @@ def faculty_roster(request):
             campaign=current_campaign
         ).select_related('faculty')
         for inv in invitations:
-            invitation_status[inv.faculty_id] = inv.status
+            # Use faculty email as key (it's the primary key)
+            invitation_status[inv.faculty.email] = inv.status
 
     return render(request, 'roster/list.html', {
         'faculty': faculty,

@@ -68,7 +68,7 @@
             </td>
             {% if current_campaign %}
             <td>
-                {% with status=invitation_status|default_if_none:""|get_item:f.id %}
+                {% with status=invitation_status|get_item:f.email %}
                     {% if status == 'submitted' %}
                         <span class="badge badge-success">Submitted</span>
                     {% elif status == 'in_progress' %}
