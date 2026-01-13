@@ -25,6 +25,7 @@ from .models import (
     ActivityCategory,
     ActivityGoal,
     ActivityType,
+    Division,
 )
 
 
@@ -580,6 +581,8 @@ def faculty_summary(request):
 
     Shows all faculty with their domain points, total, and departmental indicators.
     """
+    from survey_app.models import SurveyInvitation
+
     # Use selected academic year from session
     selected_year_code = request.session.get('selected_academic_year')
     if selected_year_code:
@@ -589,6 +592,22 @@ def faculty_summary(request):
 
     # Get all active faculty
     faculty_list = FacultyMember.objects.filter(is_active=True).order_by('last_name', 'first_name')
+
+    # Get all survey invitations for this year, grouped by faculty
+    invitations = SurveyInvitation.objects.filter(
+        campaign__academic_year=academic_year
+    ).select_related('campaign', 'faculty')
+
+    # Build quarters map: faculty_email -> list of {quarter, status}
+    faculty_quarters = {}
+    for inv in invitations:
+        email = inv.faculty.email
+        if email not in faculty_quarters:
+            faculty_quarters[email] = []
+        faculty_quarters[email].append({
+            'quarter': inv.campaign.quarter,
+            'status': inv.status,
+        })
 
     # Build summary data for each faculty
     summary_data = []
@@ -628,6 +647,10 @@ def faculty_summary(request):
                 faculty.is_ccc_member
             )
 
+        # Get quarters info for this faculty
+        quarters = faculty_quarters.get(faculty.email, [])
+        quarters_submitted = [q for q in quarters if q['status'] == 'submitted']
+
         summary_data.append({
             'faculty': faculty,
             'citizenship': citizenship,
@@ -640,6 +663,8 @@ def faculty_summary(request):
             'grand_total': grand_total,
             'has_dept_activities': has_dept_activities,
             'has_survey_data': survey is not None,
+            'quarters': quarters,
+            'quarters_submitted': len(quarters_submitted),
         })
 
     # Calculate totals
@@ -2343,4 +2368,243 @@ def verify_impact_factors(request):
         'total_count': total_count,
         'successful_lookups': successful_lookups,
         'flagged_count': flagged_count,
+    })
+
+
+# =============================================================================
+# DIVISION MANAGEMENT
+# =============================================================================
+
+def divisions_list(request):
+    """List all divisions with their chiefs and faculty counts."""
+    divisions = Division.objects.all()
+
+    # Enrich with faculty counts
+    division_data = []
+    for div in divisions:
+        faculty = div.get_faculty()
+        avc_eligible = div.get_avc_eligible_faculty()
+        division_data.append({
+            'division': div,
+            'faculty_count': faculty.count(),
+            'avc_eligible_count': avc_eligible.count(),
+        })
+
+    return render(request, 'reports/divisions_list.html', {
+        'divisions': division_data,
+        'all_faculty': FacultyMember.objects.filter(is_active=True).order_by('last_name'),
+    })
+
+
+@require_POST
+def division_update_chief(request, code):
+    """Update the division chief."""
+    division = get_object_or_404(Division, code=code)
+
+    chief_email = request.POST.get('chief_email', '').strip()
+
+    if chief_email:
+        try:
+            chief = FacultyMember.objects.get(email=chief_email)
+            division.chief = chief
+            messages.success(request, f'{chief.display_name} assigned as {division.name} Division Chief')
+        except FacultyMember.DoesNotExist:
+            messages.error(request, 'Faculty member not found')
+            return redirect('reports:divisions_list')
+    else:
+        division.chief = None
+        messages.info(request, f'{division.name} Division Chief cleared')
+
+    division.save()
+    return redirect('reports:divisions_list')
+
+
+# =============================================================================
+# COMBINED ANNUAL VIEW
+# =============================================================================
+
+def faculty_annual_view(request, email):
+    """Combined annual view of all activities for a faculty member."""
+    from survey_app.models import SurveyResponse, SurveyInvitation
+    from survey_app.survey_config import SURVEY_CATEGORIES, get_carry_forward_subsections
+
+    faculty = get_object_or_404(FacultyMember, email=email)
+    academic_year = get_academic_year()
+
+    # Get all survey responses for this faculty in the current academic year
+    responses = SurveyResponse.objects.filter(
+        invitation__faculty=faculty,
+        invitation__campaign__academic_year=academic_year,
+    ).select_related('invitation__campaign').order_by('invitation__campaign__quarter')
+
+    # Merge all response data and track source quarters
+    merged_activities = {}
+    quarters_responded = []
+    total_points = 0
+    category_points = {
+        'citizenship': 0,
+        'education': 0,
+        'research': 0,
+        'leadership': 0,
+        'content_expert': 0,
+    }
+
+    carry_forward_subs = get_carry_forward_subsections()
+
+    for resp in responses:
+        quarter = resp.invitation.campaign.quarter
+        quarters_responded.append({
+            'quarter': quarter,
+            'status': resp.invitation.status,
+            'submitted_at': resp.invitation.submitted_at,
+            'points': resp.total_points,
+        })
+
+        if not resp.response_data:
+            continue
+
+        # Process each category
+        for cat_key, cat_data in resp.response_data.items():
+            if cat_key not in merged_activities:
+                merged_activities[cat_key] = {}
+
+            # Process each subsection
+            for sub_key, sub_data in cat_data.items():
+                if not isinstance(sub_data, dict):
+                    continue
+
+                is_carry_forward = cat_key in carry_forward_subs and sub_key in carry_forward_subs.get(cat_key, [])
+
+                # For carry-forward items, only include from first quarter they appear
+                if is_carry_forward and sub_key in merged_activities[cat_key]:
+                    continue
+
+                if sub_key not in merged_activities[cat_key]:
+                    merged_activities[cat_key][sub_key] = {
+                        'entries': [],
+                        'is_carry_forward': is_carry_forward,
+                    }
+
+                entries = sub_data.get('entries', [])
+                for entry in entries:
+                    entry_copy = entry.copy()
+                    # Don't overwrite _carried_from if already set
+                    if '_source_quarter' not in entry_copy:
+                        entry_copy['_source_quarter'] = quarter
+                    merged_activities[cat_key][sub_key]['entries'].append(entry_copy)
+
+    # Calculate points (only counting non-carried items)
+    for resp in responses:
+        if resp.invitation.status == 'submitted':
+            category_points['citizenship'] += resp.citizenship_points or 0
+            category_points['education'] += resp.education_points or 0
+            category_points['research'] += resp.research_points or 0
+            category_points['leadership'] += resp.leadership_points or 0
+            category_points['content_expert'] += resp.content_expert_points or 0
+
+    total_points = sum(category_points.values())
+
+    # Get category configs for display names
+    category_configs = {}
+    for cat_key in ['citizenship', 'education', 'research', 'leadership', 'content_expert']:
+        if cat_key in SURVEY_CATEGORIES:
+            category_configs[cat_key] = SURVEY_CATEGORIES[cat_key]
+
+    return render(request, 'reports/faculty_annual_view.html', {
+        'faculty': faculty,
+        'academic_year': academic_year,
+        'quarters_responded': quarters_responded,
+        'merged_activities': merged_activities,
+        'category_configs': category_configs,
+        'category_points': category_points,
+        'total_points': total_points,
+    })
+
+
+def division_dashboard(request, code):
+    """
+    Division Chief Dashboard - shows faculty summary for a single division.
+
+    Division chiefs can view their division's faculty and their survey responses.
+    """
+    from survey_app.models import SurveyInvitation
+
+    division = get_object_or_404(Division, code=code)
+    academic_year = get_academic_year()
+
+    # Get faculty in this division
+    faculty_list = division.get_faculty().order_by('last_name', 'first_name')
+
+    # Get all survey invitations for this year for division faculty
+    invitations = SurveyInvitation.objects.filter(
+        campaign__academic_year=academic_year,
+        faculty__in=faculty_list
+    ).select_related('campaign', 'faculty')
+
+    # Build quarters map
+    faculty_quarters = {}
+    for inv in invitations:
+        email = inv.faculty.email
+        if email not in faculty_quarters:
+            faculty_quarters[email] = []
+        faculty_quarters[email].append({
+            'quarter': inv.campaign.quarter,
+            'status': inv.status,
+        })
+
+    # Build summary data for each faculty
+    summary_data = []
+    for faculty in faculty_list:
+        # Get survey data
+        survey = FacultySurveyData.objects.filter(
+            faculty=faculty, academic_year=academic_year
+        ).first()
+
+        # Get departmental data
+        dept = DepartmentalData.objects.filter(
+            faculty=faculty, academic_year=academic_year
+        ).first()
+
+        # Calculate points
+        citizenship = survey.citizenship_points if survey else 0
+        education = survey.education_points if survey else 0
+        research = survey.research_points if survey else 0
+        leadership = survey.leadership_points if survey else 0
+        content_expert = survey.content_expert_points if survey else 0
+        survey_total = citizenship + education + research + leadership + content_expert
+
+        dept_total = dept.departmental_total_points if dept else 0
+        grand_total = survey_total + dept_total
+
+        # Get quarters info
+        quarters = faculty_quarters.get(faculty.email, [])
+        quarters_submitted = [q for q in quarters if q['status'] == 'submitted']
+
+        summary_data.append({
+            'faculty': faculty,
+            'citizenship': citizenship,
+            'education': education,
+            'research': research,
+            'leadership': leadership,
+            'content_expert': content_expert,
+            'survey_total': survey_total,
+            'dept_total': dept_total,
+            'grand_total': grand_total,
+            'has_survey_data': survey is not None,
+            'quarters': quarters,
+            'quarters_submitted': len(quarters_submitted),
+        })
+
+    # Calculate totals
+    total_faculty = len(summary_data)
+    faculty_with_data = sum(1 for s in summary_data if s['has_survey_data'])
+    avc_eligible_count = sum(1 for s in summary_data if s['faculty'].is_avc_eligible)
+
+    return render(request, 'reports/division_dashboard.html', {
+        'division': division,
+        'summary_data': summary_data,
+        'academic_year': academic_year,
+        'total_faculty': total_faculty,
+        'faculty_with_data': faculty_with_data,
+        'avc_eligible_count': avc_eligible_count,
     })

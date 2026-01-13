@@ -71,4 +71,12 @@ urlpatterns = [
     path('config/points/', views.activity_points_config, name='activity_points_config'),
     path('config/points/create/', views.activity_type_create, name='activity_type_create'),
     path('config/points/<int:pk>/edit/', views.activity_type_edit, name='activity_type_edit'),
+
+    # === Division Management ===
+    path('divisions/', views.divisions_list, name='divisions_list'),
+    path('divisions/<str:code>/update-chief/', views.division_update_chief, name='division_update_chief'),
+    path('divisions/<str:code>/dashboard/', views.division_dashboard, name='division_dashboard'),
+
+    # === Annual View ===
+    path('annual/<str:email>/', views.faculty_annual_view, name='faculty_annual_view'),
 ]

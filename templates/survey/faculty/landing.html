@@ -110,6 +110,14 @@
                     Your progress is saved automatically.
                 </p>
 
+                {% if invitation.status == 'submitted' %}
+                <div class="alert alert-success">
+                    <i class="bi bi-check-circle"></i>
+                    <strong>Already submitted</strong> on {{ invitation.submitted_at|date:"M j, Y" }}.
+                    You can still make changes until the deadline.
+                </div>
+                {% endif %}
+
                 <div class="alert alert-light">
                     <strong>Deadline:</strong> {{ invitation.campaign.closes_at|date:"l, F j, Y" }} at {{ invitation.campaign.closes_at|time:"g:i A" }}
                 </div>

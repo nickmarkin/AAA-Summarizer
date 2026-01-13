@@ -292,6 +292,9 @@
 
         <div class="mt-auto p-3 border-top border-secondary">
             <small class="text-white-50 text-uppercase px-3 mb-1 d-block" style="font-size: 0.7rem;">Configuration</small>
+            <a class="nav-link {% if 'divisions' in request.resolver_match.url_name %}active{% else %}text-white-50{% endif %}" href="{% url 'divisions_list' %}">
+                <i class="bi bi-diagram-3"></i> Divisions
+            </a>
             <a class="nav-link {% if 'activity_points' in request.resolver_match.url_name or 'activity_type_edit' in request.resolver_match.url_name %}active{% else %}text-white-50{% endif %}" href="{% url 'activity_points_config' %}">
                 <i class="bi bi-sliders"></i> Activity Points
             </a>

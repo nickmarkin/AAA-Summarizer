@@ -1,0 +1,172 @@
+{% extends "base.html" %}
+{% load static %}
+{% load reports_tags %}
+
+{% block title %}{{ faculty.display_name }} - Annual View{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-start mb-4">
+        <div>
+            <h2><i class="bi bi-calendar-range"></i> Annual Activity Summary</h2>
+            <h4 class="text-muted">{{ faculty.display_name }}</h4>
+            <p class="text-muted mb-0">
+                {{ faculty.get_rank_display }} | {{ faculty.get_division_display|default:"No Division" }}
+                {% if faculty.is_avc_eligible %}<span class="badge bg-success ms-2">AVC Eligible</span>{% endif %}
+            </p>
+        </div>
+        <div class="text-end">
+            <a href="{% url 'faculty_summary' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> Faculty Summary
+            </a>
+        </div>
+    </div>
+
+    <!-- Points Summary Card -->
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0"><i class="bi bi-trophy"></i> AY {{ academic_year.year_code }} - Points Summary</h5>
+        </div>
+        <div class="card-body">
+            <div class="row text-center">
+                <div class="col">
+                    <div class="h4 mb-0">{{ category_points.citizenship|default:0 }}</div>
+                    <small class="text-muted">Citizenship</small>
+                </div>
+                <div class="col">
+                    <div class="h4 mb-0">{{ category_points.education|default:0 }}</div>
+                    <small class="text-muted">Education</small>
+                </div>
+                <div class="col">
+                    <div class="h4 mb-0">{{ category_points.research|default:0 }}</div>
+                    <small class="text-muted">Research</small>
+                </div>
+                <div class="col">
+                    <div class="h4 mb-0">{{ category_points.leadership|default:0 }}</div>
+                    <small class="text-muted">Leadership</small>
+                </div>
+                <div class="col">
+                    <div class="h4 mb-0">{{ category_points.content_expert|default:0 }}</div>
+                    <small class="text-muted">Content Expert</small>
+                </div>
+                <div class="col border-start border-3">
+                    <div class="h3 mb-0 text-success">{{ total_points }}</div>
+                    <small class="text-muted">Total</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quarters Responded -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="bi bi-calendar-check"></i> Survey Responses</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                {% for q in quarters_responded %}
+                <div class="col-md-3 mb-3">
+                    <div class="card {% if q.status == 'submitted' %}border-success{% else %}border-warning{% endif %}">
+                        <div class="card-body text-center py-3">
+                            <h5 class="mb-1">{{ q.quarter }}</h5>
+                            {% if q.status == 'submitted' %}
+                            <span class="badge bg-success">Submitted</span>
+                            <div class="small text-muted mt-1">{{ q.submitted_at|date:"M j, Y" }}</div>
+                            <div class="h5 mt-2 mb-0">{{ q.points }} pts</div>
+                            {% else %}
+                            <span class="badge bg-warning text-dark">{{ q.status|title }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="col-12">
+                    <div class="alert alert-info mb-0">
+                        No survey responses recorded for this academic year.
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Activities by Category -->
+    {% for cat_key, cat_config in category_configs.items %}
+    {% with cat_activities=merged_activities|default_if_none:"{}"|yesno:"1,0" %}
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">
+                <i class="bi bi-folder"></i> {{ cat_config.name }}
+                <span class="badge bg-secondary ms-2">{{ category_points|default_if_none:0 }} pts</span>
+            </h5>
+        </div>
+        <div class="card-body">
+            {% if cat_key in merged_activities %}
+                {% for sub_key, sub_data in merged_activities|get_item:cat_key|default:"{}".items %}
+                {% if sub_data.entries %}
+                <div class="mb-4">
+                    <h6 class="text-uppercase text-muted border-bottom pb-2">
+                        {{ sub_key|title }}
+                        {% if sub_data.is_carry_forward %}
+                        <span class="badge bg-info ms-2" title="Reported once per year">Annual</span>
+                        {% endif %}
+                    </h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Details</th>
+                                    <th width="100">Quarter</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for entry in sub_data.entries %}
+                                <tr>
+                                    <td>
+                                        {% for key, value in entry.items %}
+                                            {% if not key|slice:":1" == "_" and value %}
+                                            <span class="me-3">
+                                                <small class="text-muted">{{ key|title }}:</small>
+                                                {{ value }}
+                                            </span>
+                                            {% endif %}
+                                        {% endfor %}
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-secondary">
+                                            {{ entry._source_quarter|default:entry._carried_from|default:"?" }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                {% endif %}
+                {% empty %}
+                <p class="text-muted mb-0">No activities recorded in this category.</p>
+                {% endfor %}
+            {% else %}
+            <p class="text-muted mb-0">No activities recorded in this category.</p>
+            {% endif %}
+        </div>
+    </div>
+    {% endwith %}
+    {% endfor %}
+
+    <!-- Print/Export Actions -->
+    <div class="d-flex justify-content-end gap-2 mt-4">
+        <button onclick="window.print()" class="btn btn-outline-secondary">
+            <i class="bi bi-printer"></i> Print
+        </button>
+    </div>
+</div>
+
+<style>
+@media print {
+    .btn, nav, .navbar { display: none !important; }
+    .card { break-inside: avoid; }
+}
+</style>
+{% endblock %}

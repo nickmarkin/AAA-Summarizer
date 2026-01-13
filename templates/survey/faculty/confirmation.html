@@ -117,9 +117,20 @@
 
         <hr>
 
+        {% if invitation.campaign.is_open %}
+        <div class="mb-3">
+            <a href="{% url 'survey:survey_landing' token=invitation.token %}" class="btn btn-outline-primary">
+                <i class="bi bi-pencil"></i> Make Changes
+            </a>
+        </div>
+        <p class="text-muted small mb-0">
+            You can edit your submission until {{ invitation.campaign.closes_at|date:"F j, Y" }}.
+        </p>
+        {% else %}
         <p class="text-muted small mb-0">
             You may close this window. If you have questions, please contact the department.
         </p>
+        {% endif %}
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>

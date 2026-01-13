@@ -1,8 +1,8 @@
 {% extends 'base.html' %}
 
-{% block title %}Faculty Summary - Academic Achievement Summarizer{% endblock %}
+{% block title %}{{ division.name }} Division - Dashboard{% endblock %}
 
-{% block page_title %}Faculty Summary{% endblock %}
+{% block page_title %}{{ division.name }} Division{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -56,12 +56,6 @@
     .summary-table tr:hover {
         background: #f8f9fa;
     }
-    .summary-table tr.no-data {
-        color: #999;
-    }
-    .summary-table tr.no-data td {
-        font-style: italic;
-    }
     .points-cell {
         font-weight: 500;
     }
@@ -75,16 +69,6 @@
         font-weight: 700;
         font-size: 14px;
         color: #2c3e50;
-    }
-    .dept-indicator {
-        display: inline-block;
-        width: 10px;
-        height: 10px;
-        border-radius: 50%;
-        background: #f39c12;
-    }
-    .dept-indicator.inactive {
-        background: #ddd;
     }
     .quarter-badge {
         display: inline-block;
@@ -109,13 +93,6 @@
         background: #ffc107;
         color: #333;
     }
-    .annual-link {
-        color: #6c757d;
-        text-decoration: none;
-    }
-    .annual-link:hover {
-        color: #0d6efd;
-    }
     .avc-badge {
         background: #28a745;
         color: white;
@@ -139,29 +116,37 @@
         border: 1px solid #dee2e6;
         border-radius: 5px;
     }
-    .legend {
-        margin-top: 15px;
-        font-size: 12px;
-        color: #666;
-    }
-    .legend-item {
-        display: inline-flex;
-        align-items: center;
-        gap: 5px;
-        margin-right: 20px;
-    }
 </style>
 {% endblock %}
 
 {% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <p class="text-muted mb-0">
+            {% if division.chief %}
+            Division Chief: <strong>{{ division.chief.display_name }}</strong>
+            {% else %}
+            <span class="text-warning">No division chief assigned</span>
+            {% endif %}
+        </p>
+    </div>
+    <a href="{% url 'divisions_list' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> All Divisions
+    </a>
+</div>
+
 <div class="summary-stats">
     <div class="stat-card">
         <div class="stat-value">{{ total_faculty }}</div>
-        <div class="stat-label">Total Faculty</div>
+        <div class="stat-label">Faculty</div>
     </div>
     <div class="stat-card">
         <div class="stat-value">{{ faculty_with_data }}</div>
-        <div class="stat-label">With Survey Data</div>
+        <div class="stat-label">With Data</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value">{{ avc_eligible_count }}</div>
+        <div class="stat-label">AVC Eligible</div>
     </div>
     <div class="stat-card">
         <div class="stat-value">AY {{ academic_year.year_code }}</div>
@@ -180,7 +165,7 @@
                 <th style="width: 80px;">Education</th>
                 <th style="width: 80px;">Research</th>
                 <th style="width: 80px;">Leadership</th>
-                <th style="width: 80px;">Content Expert</th>
+                <th style="width: 80px;">Content</th>
                 <th style="width: 80px;">Dept</th>
                 <th style="width: 90px;">Total</th>
                 <th style="width: 50px;">View</th>
@@ -188,9 +173,9 @@
         </thead>
         <tbody>
             {% for item in summary_data %}
-            <tr class="{% if not item.has_survey_data %}no-data{% endif %}">
+            <tr>
                 <td>
-                    <a href="{% url 'faculty_detail' item.faculty.email %}" class="faculty-link">
+                    <a href="{% url 'faculty_annual_view' item.faculty.email %}" class="faculty-link">
                         {{ item.faculty.display_name }}
                     </a>
                 </td>
@@ -233,7 +218,7 @@
                 </td>
                 <td>
                     {% if item.quarters_submitted > 0 %}
-                    <a href="{% url 'faculty_annual_view' item.faculty.email %}" class="annual-link" title="View Annual Summary">
+                    <a href="{% url 'faculty_annual_view' item.faculty.email %}" class="text-muted" title="View Annual Summary">
                         <i class="bi bi-calendar-range"></i>
                     </a>
                     {% else %}
@@ -243,8 +228,8 @@
             </tr>
             {% empty %}
             <tr>
-                <td colspan="10" style="text-align: center; color: #666; padding: 40px;">
-                    No faculty found. <a href="{% url 'roster' %}">Add faculty</a> first.
+                <td colspan="11" class="text-center text-muted py-4">
+                    No faculty in this division.
                 </td>
             </tr>
             {% endfor %}
@@ -252,10 +237,15 @@
     </table>
 </div>
 
-<div class="legend">
-    <span class="legend-item"><span class="dept-indicator"></span> Has departmental activities</span>
-    <span class="legend-item"><span class="dept-indicator inactive"></span> No departmental activities</span>
-    <span class="legend-item"><span class="avc-badge">Yes</span> AVC Eligible</span>
-    <span class="legend-item"><span class="avc-badge not-eligible">No</span> Not AVC Eligible</span>
+<div class="mt-4 d-flex justify-content-end">
+    <button onclick="window.print()" class="btn btn-outline-secondary">
+        <i class="bi bi-printer"></i> Print
+    </button>
 </div>
+
+<style>
+@media print {
+    .btn, nav, .navbar { display: none !important; }
+}
+</style>
 {% endblock %}

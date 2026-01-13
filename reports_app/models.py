@@ -581,3 +581,54 @@ class ActivityType(models.Model):
             points = min(points, self.max_points)
 
         return points
+
+
+class Division(models.Model):
+    """
+    Department divisions with assigned division chiefs.
+
+    Division chiefs can view their faculty's survey responses and activities.
+    """
+    DIVISION_CODES = [
+        ('cardiac', 'Cardiac'),
+        ('critical_care', 'Critical Care'),
+        ('multispecialty', 'Multispecialty'),
+        ('pain', 'Pain'),
+        ('pediatric', 'Pediatric'),
+    ]
+
+    code = models.CharField(
+        max_length=50,
+        choices=DIVISION_CODES,
+        unique=True,
+        primary_key=True
+    )
+    name = models.CharField(max_length=100)
+    chief = models.ForeignKey(
+        FacultyMember,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='divisions_led',
+        help_text='Division chief who can view division faculty data'
+    )
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ['name']
+        verbose_name = 'Division'
+        verbose_name_plural = 'Divisions'
+
+    def __str__(self):
+        return self.name
+
+    def get_faculty(self):
+        """Get all active faculty in this division."""
+        return FacultyMember.objects.filter(
+            division=self.code,
+            is_active=True
+        )
+
+    def get_avc_eligible_faculty(self):
+        """Get AVC-eligible faculty in this division."""
+        return self.get_faculty().filter(is_avc_eligible=True)

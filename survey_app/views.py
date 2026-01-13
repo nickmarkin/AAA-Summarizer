@@ -695,32 +695,32 @@ def survey_submit(request, token):
         messages.error(request, 'This survey is no longer accepting submissions')
         return redirect('survey:survey_landing', token=token)
 
-    # Check if already submitted
-    if invitation.status == 'submitted':
-        messages.info(request, 'This survey has already been submitted')
-        return redirect('survey:survey_confirmation', token=token)
-
     response = get_object_or_404(SurveyResponse, invitation=invitation)
+    is_resubmission = invitation.status == 'submitted'
 
     with transaction.atomic():
         # Merge response into FacultySurveyData
         _merge_response_to_faculty_data(response)
 
-        # Mark invitation as submitted
+        # Mark invitation as submitted (updates timestamp)
         invitation.mark_submitted()
 
         # Log the submission for audit trail
         from .models import SurveyResponseHistory
         SurveyResponseHistory.log_change(
             response=response,
-            action='submit',
+            action='resubmit' if is_resubmission else 'submit',
             request=request
         )
 
-        # Send confirmation email
-        _send_confirmation_email(invitation)
+        # Send confirmation email only on first submission
+        if not is_resubmission:
+            _send_confirmation_email(invitation)
 
-    messages.success(request, 'Your survey has been submitted successfully!')
+    if is_resubmission:
+        messages.success(request, 'Your changes have been saved!')
+    else:
+        messages.success(request, 'Your survey has been submitted successfully!')
     return redirect('survey:survey_confirmation', token=token)
 
 

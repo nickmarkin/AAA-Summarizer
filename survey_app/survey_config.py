@@ -1022,12 +1022,15 @@ def calculate_subsection_points(subsection_config, subsection_data):
     # Repeating type - sum points from entries
     entries = subsection_data.get('entries', [])
 
+    # Filter out carried-forward entries - they were already counted in their source quarter
+    new_entries = [e for e in entries if not e.get('_carried_from')]
+
     # Check if this subsection uses flat points per entry (e.g., thesis committees)
     points_per_entry = subsection_config.get('points_per_entry', 0)
     if points_per_entry:
-        return len(entries) * points_per_entry
+        return len(new_entries) * points_per_entry
 
-    for entry in entries:
+    for entry in new_entries:
         entry_points = 0
 
         # Find the field with points (usually 'type' or 'role')
