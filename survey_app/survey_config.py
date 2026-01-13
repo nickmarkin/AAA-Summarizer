@@ -381,6 +381,7 @@ RESEARCH_CONFIG = {
         {
             'key': 'grant_review',
             'name': 'Grant Review (NIH Study Section)',
+            'carry_forward': True,
             'trigger': {
                 'field': 'trig_res_review',
                 'label': 'Did you participate in NIH study section grant review this quarter?',
@@ -530,7 +531,7 @@ RESEARCH_CONFIG = {
                     'name': 'title',
                     'label': 'Thesis/dissertation title',
                     'type': 'text',
-                    'required': False,
+                    'required': True,
                 },
             ],
             'points_per_entry': POINT_VALUES['thesis_member'],
