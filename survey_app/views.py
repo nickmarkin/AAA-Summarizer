@@ -14,7 +14,8 @@ from reports_app.models import AcademicYear, FacultyMember
 from .models import SurveyCampaign, SurveyInvitation, SurveyResponse, EmailLog
 from .survey_config import (
     get_category_config, calculate_category_points,
-    get_next_category, get_prev_category, CATEGORY_ORDER, CATEGORY_NAMES
+    get_next_category, get_prev_category, CATEGORY_ORDER, CATEGORY_NAMES,
+    get_carry_forward_subsections, extract_carry_forward_data
 )
 
 
@@ -459,10 +460,52 @@ def campaign_export_csv(request, pk):
 # FACULTY SURVEY VIEWS - Token-based access
 # =============================================================================
 
+def _get_carry_forward_data_for_faculty(faculty, academic_year, exclude_campaign=None):
+    """
+    Get carry-forward data from previous quarters for a faculty member.
+
+    Args:
+        faculty: FacultyMember instance
+        academic_year: AcademicYear instance
+        exclude_campaign: Campaign to exclude (current campaign)
+
+    Returns:
+        dict: Merged carry-forward data from previous submissions
+    """
+    # Find all submitted responses from this faculty in this academic year
+    previous_responses = SurveyResponse.objects.filter(
+        invitation__faculty=faculty,
+        invitation__campaign__academic_year=academic_year,
+        invitation__status='submitted'
+    ).exclude(
+        invitation__campaign=exclude_campaign
+    ).select_related('invitation__campaign').order_by(
+        'invitation__campaign__quarter'  # Earlier quarters first
+    )
+
+    merged_data = {}
+
+    for resp in previous_responses:
+        carry_forward = extract_carry_forward_data(resp.response_data or {})
+
+        # Merge into result (later quarters override earlier)
+        for cat_key, cat_data in carry_forward.items():
+            if cat_key not in merged_data:
+                merged_data[cat_key] = {}
+            for sub_key, sub_data in cat_data.items():
+                # Mark entries as carried forward
+                if 'entries' in sub_data:
+                    for entry in sub_data['entries']:
+                        entry['_carried_from'] = resp.invitation.campaign.quarter
+                merged_data[cat_key][sub_key] = sub_data
+
+    return merged_data
+
+
 def survey_landing(request, token):
     """Landing page after clicking email link."""
     invitation = get_object_or_404(
-        SurveyInvitation.objects.select_related('campaign', 'faculty'),
+        SurveyInvitation.objects.select_related('campaign', 'faculty', 'campaign__academic_year'),
         token=token
     )
 
@@ -481,6 +524,17 @@ def survey_landing(request, token):
     response, created = SurveyResponse.objects.get_or_create(
         invitation=invitation
     )
+
+    # If new response, pre-populate with carry-forward data from previous quarters
+    if created:
+        carry_forward_data = _get_carry_forward_data_for_faculty(
+            invitation.faculty,
+            invitation.campaign.academic_year,
+            exclude_campaign=invitation.campaign
+        )
+        if carry_forward_data:
+            response.response_data = carry_forward_data
+            response.save(update_fields=['response_data'])
 
     # Build category list from config (only show configured categories)
     categories = []

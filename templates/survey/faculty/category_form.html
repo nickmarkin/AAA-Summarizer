@@ -138,6 +138,18 @@
         .entry-card.show {
             display: block;
         }
+        .entry-card.carried-forward {
+            background: #f0f7ff;
+            border-color: #b8daff;
+        }
+        .carried-badge {
+            background: #007bff;
+            color: white;
+            font-size: 11px;
+            padding: 2px 8px;
+            border-radius: 10px;
+            margin-left: 8px;
+        }
         .entry-header {
             display: flex;
             justify-content: space-between;
@@ -344,11 +356,15 @@
 
         function renderSubsection(sub, idx) {
             const triggerName = `${sub.key}_trigger`;
+            const carryForwardNote = sub.carry_forward
+                ? '<small class="text-muted d-block mb-2"><i class="bi bi-arrow-repeat"></i> Report once per year - carries forward to future quarters</small>'
+                : '';
 
             let html = `
                 <div class="subsection" data-subsection="${sub.key}">
                     <div class="subsection-header">
                         <div class="subsection-title">${sub.name}</div>
+                        ${carryForwardNote}
                     </div>
             `;
 
@@ -530,6 +546,13 @@
                 if (sub.type === 'repeating' && state.subsections[subKey].entryCount === 0) {
                     addEntry(subKey);
                 }
+
+                // Scroll to show the entries section
+                setTimeout(() => {
+                    if (entriesEl) {
+                        entriesEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    }
+                }, 100);
             } else {
                 // Hide entries
                 if (entriesEl) entriesEl.classList.remove('show');
@@ -612,7 +635,11 @@
 
                         // Populate fields
                         let selectedType = null;
+                        const carriedFrom = entry['_carried_from'];
+
                         Object.keys(entry).forEach(fieldName => {
+                            if (fieldName.startsWith('_')) return;  // Skip metadata fields
+
                             const value = entry[fieldName];
                             const radio = document.querySelector(`input[name="${prefix}_${fieldName}"][value="${value}"]`);
                             if (radio) {
@@ -632,6 +659,18 @@
                             handleTypeSelection(prefix, selectedType);
                         } else {
                             showEntryDetails(prefix);
+                        }
+
+                        // Mark as carried forward if applicable
+                        if (carriedFrom) {
+                            const entryCard = document.getElementById(`entry_${prefix}`);
+                            if (entryCard) {
+                                entryCard.classList.add('carried-forward');
+                                const titleEl = entryCard.querySelector('.entry-title');
+                                if (titleEl) {
+                                    titleEl.innerHTML += `<span class="carried-badge">From ${carriedFrom}</span>`;
+                                }
+                            }
                         }
                     });
                 }

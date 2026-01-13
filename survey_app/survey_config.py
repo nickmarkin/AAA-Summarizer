@@ -136,9 +136,10 @@ CITIZENSHIP_CONFIG = {
         {
             'key': 'committees',
             'name': 'Committee Membership',
+            'carry_forward': True,  # Report once per year, carries to subsequent quarters
             'trigger': {
                 'field': 'trig_cit_commit',
-                'label': 'Did you participate in any committee work this quarter (UNMC standing, Nebraska Medicine standing, or minor committees)?',
+                'label': 'Are you serving on any committees this year (UNMC standing, Nebraska Medicine standing, or minor committees)?',
                 'type': 'yesno',
                 'help_text': 'Select Yes to enter details below',
             },
@@ -350,6 +351,7 @@ EDUCATION_CONFIG = {
         {
             'key': 'rotation_director',
             'name': 'Rotation Director',
+            'carry_forward': True,  # Report once per year, carries to subsequent quarters
             'trigger': {
                 'field': 'trig_edu_rotation',
                 'label': 'Are you serving as a Rotation Director?',
@@ -502,6 +504,7 @@ RESEARCH_CONFIG = {
         {
             'key': 'thesis_committees',
             'name': 'Thesis/Dissertation Committees',
+            'carry_forward': True,  # Report once per year, carries to subsequent quarters
             'trigger': {
                 'field': 'trig_res_thesis',
                 'label': 'Are you serving on any thesis or dissertation committees?',
@@ -583,6 +586,7 @@ LEADERSHIP_CONFIG = {
         {
             'key': 'society_leadership',
             'name': 'Society Leadership',
+            'carry_forward': True,  # Report once per year, carries to subsequent quarters
             'trigger': {
                 'field': 'trig_lead_society',
                 'label': 'Do you hold any society leadership positions (BOD, RRC, committee chair/member)?',
@@ -615,6 +619,7 @@ LEADERSHIP_CONFIG = {
         {
             'key': 'board_leadership',
             'name': 'Board Examination Leadership',
+            'carry_forward': True,  # Report once per year, carries to subsequent quarters
             'trigger': {
                 'field': 'trig_lead_board',
                 'label': 'Do you hold any board examination leadership roles (editor, examiner, question writer)?',
@@ -804,9 +809,10 @@ CONTENT_EXPERT_CONFIG = {
         {
             'key': 'pathways',
             'name': 'Clinical Pathways',
+            'carry_forward': True,  # Report once per year, carries to subsequent quarters
             'trigger': {
                 'field': 'trig_ce_pathways',
-                'label': 'Did you create or revise any clinical pathways this quarter?',
+                'label': 'Did you create or revise any clinical pathways this year?',
                 'type': 'yesno',
                 'help_text': 'Select Yes to enter details below',
             },
@@ -931,6 +937,7 @@ CONTENT_EXPERT_CONFIG = {
         {
             'key': 'journal_editorial',
             'name': 'Journal Editorial Roles',
+            'carry_forward': True,  # Report once per year, carries to subsequent quarters
             'trigger': {
                 'field': 'trig_ce_editorial',
                 'label': 'Do you hold any journal editorial positions?',
@@ -1100,3 +1107,47 @@ def get_prev_category(current_category):
     except ValueError:
         pass
     return None
+
+
+def get_carry_forward_subsections():
+    """
+    Get all subsection keys that should carry forward across quarters.
+
+    Returns:
+        dict: {category_key: [subsection_keys]} for carry-forward subsections
+    """
+    result = {}
+    for cat_key, cat_config in SURVEY_CATEGORIES.items():
+        carry_forward_subs = []
+        for sub in cat_config.get('subsections', []):
+            if sub.get('carry_forward', False):
+                carry_forward_subs.append(sub['key'])
+        if carry_forward_subs:
+            result[cat_key] = carry_forward_subs
+    return result
+
+
+def extract_carry_forward_data(response_data):
+    """
+    Extract only carry-forward items from a survey response.
+
+    Args:
+        response_data: Full response data dict
+
+    Returns:
+        dict: Only the carry-forward subsections with their data
+    """
+    carry_forward_subs = get_carry_forward_subsections()
+    result = {}
+
+    for cat_key, sub_keys in carry_forward_subs.items():
+        cat_data = response_data.get(cat_key, {})
+        for sub_key in sub_keys:
+            sub_data = cat_data.get(sub_key, {})
+            # Only include if there are actual entries
+            if sub_data.get('trigger') == 'yes' and sub_data.get('entries'):
+                if cat_key not in result:
+                    result[cat_key] = {}
+                result[cat_key][sub_key] = sub_data
+
+    return result
