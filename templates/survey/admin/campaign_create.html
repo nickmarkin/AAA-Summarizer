@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+
+{% block title %}Create Campaign{% endblock %}
+
+{% block page_title %}Create Survey Campaign{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <h5 class="mb-3">Campaign Details</h5>
+            <form method="post">
+                {% csrf_token %}
+
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label for="academic_year" class="form-label">Academic Year</label>
+                        <select name="academic_year" id="academic_year" class="form-select" required>
+                            {% for year in academic_years %}
+                            <option value="{{ year.year_code }}"
+                                    {% if year.year_code == current_year.year_code %}selected{% endif %}>
+                                AY {{ year.year_code }}{% if year.is_current %} (Current){% endif %}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="quarter" class="form-label">Quarter</label>
+                        <select name="quarter" id="quarter" class="form-select" required>
+                            <option value="">Select quarter...</option>
+                            {% for value, label in quarter_choices %}
+                            <option value="{{ value }}">{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label for="name" class="form-label">Campaign Name (optional)</label>
+                    <input type="text" name="name" id="name" class="form-control"
+                           placeholder="Auto-generated if left blank">
+                    <div class="form-text">E.g., "AY 24-25 Q1-Q2 Survey"</div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label for="opens_at" class="form-label">Opens At</label>
+                        <input type="datetime-local" name="opens_at" id="opens_at"
+                               class="form-control" required>
+                        <div class="form-text">When the survey becomes available</div>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="closes_at" class="form-label">Closes At</label>
+                        <input type="datetime-local" name="closes_at" id="closes_at"
+                               class="form-control" required>
+                        <div class="form-text">Submission deadline</div>
+                    </div>
+                </div>
+
+                <hr>
+
+                <div class="d-flex justify-content-between">
+                    <a href="{% url 'survey:campaign_list' %}" class="btn btn-secondary">
+                        Cancel
+                    </a>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-plus-lg"></i> Create Campaign
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card bg-light">
+            <h6><i class="bi bi-info-circle"></i> What happens next?</h6>
+            <ul class="mb-0 ps-3">
+                <li>Invitations will be created for all active faculty</li>
+                <li>Each faculty receives a unique survey link</li>
+                <li>You can send invitation emails from the campaign detail page</li>
+                <li>Track progress and send reminders as needed</li>
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}

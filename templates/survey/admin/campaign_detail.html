@@ -1,0 +1,240 @@
+{% extends "base.html" %}
+
+{% block title %}{{ campaign.name }}{% endblock %}
+
+{% block page_title %}{{ campaign.name }}{% endblock %}
+
+{% block content %}
+<!-- Breadcrumb -->
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{% url 'survey:campaign_list' %}">Campaigns</a></li>
+        <li class="breadcrumb-item active">{{ campaign.name }}</li>
+    </ol>
+</nav>
+
+<!-- Status & Actions -->
+<div class="row mb-4">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="d-flex justify-content-between align-items-start mb-3">
+                <div>
+                    <h5 class="mb-1">{{ campaign.name }}</h5>
+                    <p class="text-muted mb-0">
+                        AY {{ campaign.academic_year.year_code }} &middot; {{ campaign.quarter }}
+                    </p>
+                </div>
+                <div>
+                    {% if campaign.status == 'Open' %}
+                        <span class="badge bg-success fs-6">Open</span>
+                    {% elif campaign.status == 'Scheduled' %}
+                        <span class="badge bg-info fs-6">Scheduled</span>
+                    {% elif campaign.status == 'Closed' %}
+                        <span class="badge bg-secondary fs-6">Closed</span>
+                    {% else %}
+                        <span class="badge bg-warning fs-6">Inactive</span>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="row text-center">
+                <div class="col">
+                    <div class="stat">
+                        <div class="stat-value">{{ stats.total }}</div>
+                        <div class="stat-label">Total</div>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="stat" style="background: #d4edda;">
+                        <div class="stat-value text-success">{{ stats.submitted }}</div>
+                        <div class="stat-label">Submitted</div>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="stat" style="background: #fff3cd;">
+                        <div class="stat-value text-warning">{{ stats.in_progress }}</div>
+                        <div class="stat-label">In Progress</div>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="stat" style="background: #f8d7da;">
+                        <div class="stat-value text-danger">{{ stats.pending }}</div>
+                        <div class="stat-label">Not Started</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="progress mt-3" style="height: 25px;">
+                <div class="progress-bar bg-success" style="width: {{ stats.completion_rate }}%">
+                    {{ stats.completion_rate|floatformat:0 }}% Complete
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card">
+            <h6>Actions</h6>
+            <div class="d-grid gap-2">
+                <form method="post" action="{% url 'survey:campaign_send' pk=campaign.pk %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-primary w-100"
+                            {% if not campaign.is_active %}disabled{% endif %}>
+                        <i class="bi bi-envelope"></i> Send Invitations
+                    </button>
+                </form>
+                <form method="post" action="{% url 'survey:campaign_remind' pk=campaign.pk %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-warning w-100"
+                            {% if not campaign.is_active %}disabled{% endif %}>
+                        <i class="bi bi-bell"></i> Send Reminders
+                    </button>
+                </form>
+                <a href="{% url 'survey:campaign_edit' pk=campaign.pk %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-pencil"></i> Edit Campaign
+                </a>
+                <a href="{% url 'survey:campaign_export' pk=campaign.pk %}" class="btn btn-success">
+                    <i class="bi bi-download"></i> Export CSV
+                </a>
+            </div>
+
+            <hr>
+
+            <dl class="mb-0">
+                <dt>Opens</dt>
+                <dd>{{ campaign.opens_at|date:"M j, Y g:i A" }}</dd>
+                <dt>Closes</dt>
+                <dd>{{ campaign.closes_at|date:"M j, Y g:i A" }}</dd>
+            </dl>
+        </div>
+    </div>
+</div>
+
+<!-- Invitations Table -->
+<div class="card">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="mb-0">Invitations</h5>
+        <div class="btn-group btn-group-sm" role="group">
+            <button type="button" class="btn btn-outline-secondary active" data-filter="all">All</button>
+            <button type="button" class="btn btn-outline-success" data-filter="submitted">Submitted</button>
+            <button type="button" class="btn btn-outline-warning" data-filter="in_progress">In Progress</button>
+            <button type="button" class="btn btn-outline-danger" data-filter="pending">Pending</button>
+        </div>
+    </div>
+
+    <table class="table table-hover" id="invitations-table">
+        <thead>
+            <tr>
+                <th>Faculty</th>
+                <th>Email</th>
+                <th>Status</th>
+                <th>Email Sent</th>
+                <th>First Access</th>
+                <th>Submitted</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for inv in invitations %}
+            <tr data-status="{{ inv.status }}">
+                <td>{{ inv.faculty.display_name }}</td>
+                <td><small>{{ inv.faculty.email }}</small></td>
+                <td>
+                    {% if inv.status == 'submitted' %}
+                        <span class="badge bg-success">Submitted</span>
+                    {% elif inv.status == 'in_progress' %}
+                        <span class="badge bg-warning">In Progress</span>
+                    {% else %}
+                        <span class="badge bg-secondary">Pending</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if inv.email_sent_at %}
+                        <small>{{ inv.email_sent_at|date:"M j, g:i A" }}</small>
+                    {% else %}
+                        <span class="text-muted">-</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if inv.first_accessed_at %}
+                        <small>{{ inv.first_accessed_at|date:"M j, g:i A" }}</small>
+                    {% else %}
+                        <span class="text-muted">-</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if inv.submitted_at %}
+                        <small>{{ inv.submitted_at|date:"M j, g:i A" }}</small>
+                    {% else %}
+                        <span class="text-muted">-</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <div class="btn-group btn-group-sm">
+                        <button type="button" class="btn btn-outline-secondary btn-sm"
+                                onclick="copyLink('{{ inv.token }}')" title="Copy survey link">
+                            <i class="bi bi-link-45deg"></i>
+                        </button>
+                        <a href="{% url 'survey:invitation_history' pk=inv.pk %}" class="btn btn-outline-secondary btn-sm" title="View edit history">
+                            <i class="bi bi-clock-history"></i>
+                        </a>
+                        {% if inv.status == 'submitted' %}
+                        <form method="post" action="{% url 'survey:invitation_unlock' pk=inv.pk %}"
+                              style="display: inline;" onsubmit="return confirm('Unlock survey for {{ inv.faculty.display_name }}? They will be able to edit and resubmit.')">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-outline-warning btn-sm" title="Unlock for editing">
+                                <i class="bi bi-unlock"></i>
+                            </button>
+                        </form>
+                        {% endif %}
+                    </div>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="7" class="text-center text-muted py-4">
+                    No invitations found
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.querySelectorAll('[data-filter]').forEach(btn => {
+    btn.addEventListener('click', function() {
+        const filter = this.dataset.filter;
+
+        // Update active button
+        document.querySelectorAll('[data-filter]').forEach(b => b.classList.remove('active'));
+        this.classList.add('active');
+
+        // Filter rows
+        document.querySelectorAll('#invitations-table tbody tr').forEach(row => {
+            if (filter === 'all' || row.dataset.status === filter) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+    });
+});
+
+function copyLink(token) {
+    const url = `${window.location.origin}/survey/s/${token}/`;
+    navigator.clipboard.writeText(url).then(() => {
+        // Brief visual feedback
+        const btn = event.target.closest('button');
+        const icon = btn.querySelector('i');
+        icon.className = 'bi bi-check';
+        setTimeout(() => { icon.className = 'bi bi-link-45deg'; }, 1500);
+    }).catch(err => {
+        // Fallback: show URL in prompt
+        prompt('Copy this link:', url);
+    });
+}
+</script>
+{% endblock %}

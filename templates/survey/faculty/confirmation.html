@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Survey Submitted - UNMC Anesthesiology</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .confirmation-card {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 550px;
+            width: 100%;
+            padding: 40px;
+            text-align: center;
+        }
+        .success-icon {
+            width: 100px;
+            height: 100px;
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 25px;
+            animation: scaleIn 0.5s ease-out;
+        }
+        .success-icon i {
+            font-size: 3rem;
+            color: white;
+        }
+        @keyframes scaleIn {
+            from { transform: scale(0); }
+            to { transform: scale(1); }
+        }
+        .points-summary {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 25px 0;
+        }
+        .points-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #e9ecef;
+        }
+        .points-row:last-child {
+            border-bottom: none;
+            font-weight: bold;
+            font-size: 1.1rem;
+            padding-top: 12px;
+            margin-top: 8px;
+            border-top: 2px solid #dee2e6;
+        }
+    </style>
+</head>
+<body>
+    <div class="confirmation-card">
+        <div class="success-icon">
+            <i class="bi bi-check-lg"></i>
+        </div>
+
+        <h2 class="mb-2">Survey Submitted!</h2>
+        <p class="text-muted mb-0">
+            Thank you, {{ invitation.faculty.first_name }}. Your academic achievement survey has been recorded.
+        </p>
+
+        <div class="alert alert-success mt-4">
+            <i class="bi bi-envelope-check"></i>
+            A confirmation email has been sent to <strong>{{ invitation.faculty.email }}</strong>
+        </div>
+
+        <div class="points-summary text-start">
+            <h6 class="text-uppercase text-muted mb-3">Points Summary</h6>
+            <div class="points-row">
+                <span>Citizenship</span>
+                <span>{{ response.citizenship_points|default:0 }}</span>
+            </div>
+            <div class="points-row">
+                <span>Education</span>
+                <span>{{ response.education_points|default:0 }}</span>
+            </div>
+            <div class="points-row">
+                <span>Research</span>
+                <span>{{ response.research_points|default:0 }}</span>
+            </div>
+            <div class="points-row">
+                <span>Leadership</span>
+                <span>{{ response.leadership_points|default:0 }}</span>
+            </div>
+            <div class="points-row">
+                <span>Content Expert</span>
+                <span>{{ response.content_expert_points|default:0 }}</span>
+            </div>
+            <div class="points-row">
+                <span>Total Survey Points</span>
+                <span class="text-success">{{ response.total_points|default:0 }}</span>
+            </div>
+        </div>
+
+        <p class="text-muted small">
+            <strong>Submitted:</strong> {{ invitation.submitted_at|date:"F j, Y" }} at {{ invitation.submitted_at|time:"g:i A" }}
+            <br>
+            <strong>Campaign:</strong> {{ invitation.campaign.name }}
+        </p>
+
+        <hr>
+
+        <p class="text-muted small mb-0">
+            You may close this window. If you have questions, please contact the department.
+        </p>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

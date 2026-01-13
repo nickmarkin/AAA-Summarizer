@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'reports_app',
+    'survey_app',
 ]
 
 MIDDLEWARE = [
@@ -185,3 +186,48 @@ DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10MB
 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+
+# =============================================================================
+# EMAIL CONFIGURATION
+# =============================================================================
+#
+# Default: Console backend (prints emails to console for development)
+# Production: Configure SMTP or transactional email service
+#
+# Environment variables:
+#   EMAIL_BACKEND       - Django email backend class
+#   EMAIL_HOST          - SMTP server hostname
+#   EMAIL_PORT          - SMTP port (default: 587 for TLS)
+#   EMAIL_USE_TLS       - Use TLS encryption (default: True)
+#   EMAIL_HOST_USER     - SMTP username
+#   EMAIL_HOST_PASSWORD - SMTP password or app-specific password
+#   DEFAULT_FROM_EMAIL  - Default sender address
+#
+# =============================================================================
+
+EMAIL_BACKEND = os.environ.get(
+    'EMAIL_BACKEND',
+    'django.core.mail.backends.console.EmailBackend'  # Dev: prints to console
+)
+
+# SMTP Configuration (used when EMAIL_BACKEND is smtp)
+EMAIL_HOST = os.environ.get('EMAIL_HOST', 'smtp.gmail.com')
+EMAIL_PORT = int(os.environ.get('EMAIL_PORT', '587'))
+EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'True').lower() in ('true', '1', 'yes')
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
+
+DEFAULT_FROM_EMAIL = os.environ.get(
+    'DEFAULT_FROM_EMAIL',
+    'AVC Survey <noreply@unmc.edu>'
+)
+
+# Survey-specific email settings
+SURVEY_EMAIL_SUBJECT_PREFIX = os.environ.get(
+    'SURVEY_EMAIL_SUBJECT_PREFIX',
+    '[UNMC Anesthesiology] '
+)
+
+# Site URL for email links (defaults to localhost for development)
+SITE_URL = os.environ.get('SITE_URL', 'http://localhost:8000')

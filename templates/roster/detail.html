@@ -290,6 +290,59 @@
     </div>
 </div>
 
+<!-- Current Survey Invitation -->
+{% if current_campaign %}
+<div class="summary-row">
+    <div class="info-card" style="flex: 1;">
+        <h3>Current Survey: {{ current_campaign.name }}</h3>
+        {% if current_invitation %}
+        <table class="info-table">
+            <tr>
+                <th>Status</th>
+                <td>
+                    {% if current_invitation.status == 'submitted' %}
+                        <span class="badge-success">Submitted</span>
+                    {% elif current_invitation.status == 'in_progress' %}
+                        <span class="badge-warning">In Progress</span>
+                    {% else %}
+                        <span class="badge-danger">Not Started</span>
+                    {% endif %}
+                </td>
+            </tr>
+            <tr><th>Email Sent</th><td>{{ current_invitation.email_sent_at|date:"M j, Y g:i A"|default:"Not sent" }}</td></tr>
+            <tr><th>First Accessed</th><td>{{ current_invitation.first_accessed_at|date:"M j, Y g:i A"|default:"Never" }}</td></tr>
+            {% if current_invitation.status == 'submitted' %}
+            <tr><th>Submitted</th><td>{{ current_invitation.submitted_at|date:"M j, Y g:i A" }}</td></tr>
+            {% endif %}
+        </table>
+        <div class="action-buttons" style="margin-top: 15px; display: flex; gap: 10px; flex-wrap: wrap;">
+            <button type="button" class="btn btn-app btn-sm" onclick="copyLink('{{ current_invitation.token }}')" title="Copy survey link">
+                <i class="bi bi-link-45deg"></i> Copy Link
+            </button>
+            <form method="post" action="{% url 'survey:campaign_send' pk=current_campaign.pk %}" style="display: inline;">
+                {% csrf_token %}
+                <input type="hidden" name="single_faculty" value="{{ faculty.email }}">
+                <button type="submit" class="btn btn-app btn-sm btn-secondary" title="Resend invitation email">
+                    <i class="bi bi-envelope"></i> Resend Email
+                </button>
+            </form>
+            {% if current_invitation.status == 'submitted' %}
+            <form method="post" action="{% url 'survey:invitation_unlock' pk=current_invitation.pk %}" style="display: inline;"
+                  onsubmit="return confirm('Unlock survey for {{ faculty.display_name }}? They will be able to edit and resubmit.')">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-app btn-sm btn-warning" title="Unlock for editing">
+                    <i class="bi bi-unlock"></i> Unlock
+                </button>
+            </form>
+            {% endif %}
+        </div>
+        {% else %}
+        <p class="no-data">No invitation for this faculty in the current campaign.</p>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
 <!-- Activity Details -->
 <h2 style="margin-top: 30px; margin-bottom: 20px;">Activity Details</h2>
 
@@ -341,4 +394,17 @@
         <a href="{% url 'add_activity' faculty.email %}">add activities manually</a>.
     </div>
 {% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+function copyLink(token) {
+    const url = `${window.location.origin}/survey/s/${token}/`;
+    navigator.clipboard.writeText(url).then(() => {
+        alert('Survey link copied to clipboard!');
+    }).catch(err => {
+        prompt('Copy this link:', url);
+    });
+}
+</script>
 {% endblock %}

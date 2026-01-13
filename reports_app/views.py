@@ -489,6 +489,17 @@ def faculty_roster(request):
     if ccc_only:
         faculty = faculty.filter(is_ccc_member=True)
 
+    # Get current campaign and invitation status for each faculty
+    from survey_app.models import SurveyInvitation, SurveyCampaign
+    current_campaign = SurveyCampaign.objects.filter(is_active=True).order_by('-opens_at').first()
+    invitation_status = {}
+    if current_campaign:
+        invitations = SurveyInvitation.objects.filter(
+            campaign=current_campaign
+        ).select_related('faculty')
+        for inv in invitations:
+            invitation_status[inv.faculty_id] = inv.status
+
     return render(request, 'roster/list.html', {
         'faculty': faculty,
         'division_choices': FacultyMember.DIVISION_CHOICES,
@@ -498,6 +509,8 @@ def faculty_roster(request):
         'current_rank': rank,
         'current_contract': contract,
         'ccc_only': ccc_only,
+        'current_campaign': current_campaign,
+        'invitation_status': invitation_status,
     })
 
 
@@ -688,6 +701,16 @@ def faculty_detail(request, email):
         dept_total = dept_data.departmental_total_points
     grand_total = survey_total + dept_total
 
+    # Get current survey invitation (most recent active campaign)
+    from survey_app.models import SurveyInvitation, SurveyCampaign
+    current_invitation = None
+    current_campaign = SurveyCampaign.objects.filter(is_active=True).order_by('-opens_at').first()
+    if current_campaign:
+        current_invitation = SurveyInvitation.objects.filter(
+            campaign=current_campaign,
+            faculty=faculty
+        ).select_related('campaign').first()
+
     return render(request, 'roster/detail.html', {
         'faculty': faculty,
         'academic_year': academic_year,
@@ -697,6 +720,8 @@ def faculty_detail(request, email):
         'survey_total': survey_total,
         'dept_total': dept_total,
         'grand_total': grand_total,
+        'current_invitation': current_invitation,
+        'current_campaign': current_campaign,
     })
 
 

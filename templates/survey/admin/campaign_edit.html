@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Campaign{% endblock %}
+
+{% block page_title %}Edit Campaign{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{% url 'survey:campaign_list' %}">Campaigns</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'survey:campaign_detail' pk=campaign.pk %}">{{ campaign.name }}</a></li>
+        <li class="breadcrumb-item active">Edit</li>
+    </ol>
+</nav>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <h5 class="mb-3">Edit Campaign</h5>
+            <form method="post">
+                {% csrf_token %}
+
+                <div class="mb-3">
+                    <label for="name" class="form-label">Campaign Name</label>
+                    <input type="text" name="name" id="name" class="form-control"
+                           value="{{ campaign.name }}" required>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label for="opens_at" class="form-label">Opens At</label>
+                        <input type="datetime-local" name="opens_at" id="opens_at"
+                               class="form-control"
+                               value="{{ campaign.opens_at|date:'Y-m-d' }}T{{ campaign.opens_at|time:'H:i' }}"
+                               required>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="closes_at" class="form-label">Closes At</label>
+                        <input type="datetime-local" name="closes_at" id="closes_at"
+                               class="form-control"
+                               value="{{ campaign.closes_at|date:'Y-m-d' }}T{{ campaign.closes_at|time:'H:i' }}"
+                               required>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <div class="form-check">
+                        <input type="checkbox" name="is_active" id="is_active"
+                               class="form-check-input"
+                               {% if campaign.is_active %}checked{% endif %}>
+                        <label for="is_active" class="form-check-label">
+                            Active (accepting submissions)
+                        </label>
+                    </div>
+                </div>
+
+                <hr>
+
+                <div class="d-flex justify-content-between">
+                    <a href="{% url 'survey:campaign_detail' pk=campaign.pk %}" class="btn btn-secondary">
+                        Cancel
+                    </a>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-lg"></i> Save Changes
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card bg-light">
+            <h6>Campaign Info</h6>
+            <dl class="mb-0">
+                <dt>Academic Year</dt>
+                <dd>AY {{ campaign.academic_year.year_code }}</dd>
+                <dt>Quarter</dt>
+                <dd>{{ campaign.quarter }}</dd>
+                <dt>Created</dt>
+                <dd>{{ campaign.created_at|date:"M j, Y g:i A" }}</dd>
+            </dl>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -265,6 +265,12 @@
                 </a>
             </li>
             <li class="nav-item">
+                <a class="nav-link {% if 'survey:' in request.resolver_match.view_name %}active{% endif %}"
+                   href="{% url 'survey:campaign_list' %}">
+                    <i class="bi bi-send-check"></i> Survey Campaigns
+                </a>
+            </li>
+            <li class="nav-item">
                 <a class="nav-link {% if 'departmental' in request.resolver_match.url_name %}active{% endif %}"
                    href="{% url 'departmental_data' %}">
                     <i class="bi bi-clipboard-data"></i> Departmental Data
