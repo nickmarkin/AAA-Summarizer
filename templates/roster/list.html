@@ -5,13 +5,124 @@
 
 {% block page_title %}Faculty Roster{% endblock %}
 
+{% block extra_css %}
+<style>
+    .roster-filters {
+        background: #f8f9fa;
+        padding: 15px 20px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        flex-wrap: wrap;
+    }
+    .roster-filters select {
+        padding: 8px 12px;
+        border: 1px solid #dee2e6;
+        border-radius: 6px;
+        background: white;
+    }
+    .roster-filters label {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        cursor: pointer;
+    }
+    .faculty-card {
+        background: white;
+        border: 1px solid #e9ecef;
+        border-radius: 8px;
+        margin-bottom: 10px;
+        transition: all 0.15s ease;
+        cursor: pointer;
+    }
+    .faculty-card:hover {
+        border-color: #0d6efd;
+        box-shadow: 0 2px 8px rgba(13, 110, 253, 0.15);
+        transform: translateY(-1px);
+    }
+    .faculty-card a {
+        display: flex;
+        align-items: center;
+        padding: 15px 20px;
+        text-decoration: none;
+        color: inherit;
+    }
+    .faculty-name {
+        font-weight: 600;
+        color: #212529;
+        min-width: 200px;
+    }
+    .faculty-email {
+        color: #6c757d;
+        font-size: 13px;
+        min-width: 220px;
+    }
+    .faculty-info {
+        display: flex;
+        gap: 20px;
+        flex: 1;
+        font-size: 14px;
+        color: #495057;
+    }
+    .faculty-info span {
+        min-width: 100px;
+    }
+    .faculty-badges {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+    }
+    .badge {
+        padding: 4px 10px;
+        border-radius: 12px;
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+    .badge-success { background: #d4edda; color: #155724; }
+    .badge-warning { background: #fff3cd; color: #856404; }
+    .badge-secondary { background: #e9ecef; color: #495057; }
+    .badge-info { background: #d1ecf1; color: #0c5460; }
+    .badge-danger { background: #f8d7da; color: #721c24; }
+    .roster-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+    }
+    .roster-count {
+        color: #6c757d;
+        font-size: 14px;
+    }
+    .edit-btn {
+        padding: 4px 12px;
+        font-size: 12px;
+        color: #6c757d;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        background: white;
+        text-decoration: none;
+        margin-left: 10px;
+    }
+    .edit-btn:hover {
+        background: #f8f9fa;
+        color: #495057;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
-<h1>Faculty Roster</h1>
+<div class="roster-header">
+    <div>
+        <a href="{% url 'import_roster' %}" class="btn btn-app btn-sm">Import from CSV</a>
+    </div>
+    <div class="roster-count">{{ faculty|length }} faculty members</div>
+</div>
 
-<div class="actions">
-    <a href="{% url 'import_roster' %}" class="btn">Import from CSV</a>
-
-    <form method="get" style="display: inline-block; margin-left: 20px;">
+<div class="roster-filters">
+    <form method="get" style="display: contents;">
         <select name="division" onchange="this.form.submit()">
             <option value="">All Divisions</option>
             {% for value, label in division_choices %}
@@ -27,47 +138,33 @@
         </select>
 
         <select name="contract" onchange="this.form.submit()">
-            <option value="">All Contract Types</option>
+            <option value="">All Contracts</option>
             {% for value, label in contract_choices %}
             <option value="{{ value }}" {% if value == current_contract %}selected{% endif %}>{{ label }}</option>
             {% endfor %}
         </select>
 
-        <label style="margin-left: 15px;">
+        <label>
             <input type="checkbox" name="ccc" value="1" {% if ccc_only %}checked{% endif %} onchange="this.form.submit()">
-            CCC Members Only
+            CCC Only
         </label>
     </form>
 </div>
 
-<table>
-    <thead>
-        <tr>
-            <th>Name</th>
-            <th>Email</th>
-            <th>Rank</th>
-            <th>Contract</th>
-            <th>Division</th>
-            <th>CCC</th>
-            {% if current_campaign %}<th>Survey</th>{% endif %}
-            <th>Actions</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for f in faculty %}
-        <tr>
-            <td><a href="{% url 'faculty_detail' f.email %}">{{ f.display_name }}</a></td>
-            <td>{{ f.email }}</td>
-            <td>{{ f.get_rank_display|default:"-" }}</td>
-            <td>{{ f.get_contract_type_display|default:"-" }}</td>
-            <td>{{ f.get_division_display|default:"-" }}</td>
-            <td>
-                {% if f.is_ccc_member %}
-                <span class="badge badge-info">CCC</span>
-                {% endif %}
-            </td>
+{% for f in faculty %}
+<div class="faculty-card">
+    <a href="{% url 'faculty_detail' f.email %}">
+        <span class="faculty-name">{{ f.display_name }}</span>
+        <span class="faculty-email">{{ f.email }}</span>
+        <span class="faculty-info">
+            <span>{{ f.get_rank_display|default:"-" }}</span>
+            <span>{{ f.get_division_display|default:"-" }}</span>
+        </span>
+        <span class="faculty-badges">
+            {% if f.is_ccc_member %}
+            <span class="badge badge-info">CCC</span>
+            {% endif %}
             {% if current_campaign %}
-            <td>
                 {% with status=invitation_status|get_item:f.email %}
                     {% if status == 'submitted' %}
                         <span class="badge badge-success">Submitted</span>
@@ -75,25 +172,15 @@
                         <span class="badge badge-warning">In Progress</span>
                     {% elif status == 'pending' %}
                         <span class="badge badge-secondary">Pending</span>
-                    {% else %}
-                        <span class="badge badge-danger">No Invite</span>
                     {% endif %}
                 {% endwith %}
-            </td>
             {% endif %}
-            <td>
-                <a href="{% url 'faculty_edit' f.email %}">Edit</a>
-            </td>
-        </tr>
-        {% empty %}
-        <tr>
-            <td colspan="{% if current_campaign %}8{% else %}7{% endif %}" style="text-align: center; color: #666;">
-                No faculty found. <a href="{% url 'import_roster' %}">Import roster from CSV</a>
-            </td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
-
-<p style="color: #666; font-size: 14px;">{{ faculty|length }} faculty members</p>
+        </span>
+    </a>
+</div>
+{% empty %}
+<div class="card" style="text-align: center; padding: 40px; color: #666;">
+    No faculty found. <a href="{% url 'import_roster' %}">Import roster from CSV</a>
+</div>
+{% endfor %}
 {% endblock %}
