@@ -777,6 +777,8 @@ def faculty_detail(request, email):
 
 def faculty_edit(request, email):
     """Edit faculty member."""
+    from .models import Division
+
     faculty = get_object_or_404(FacultyMember, email=email)
 
     if request.method == 'POST':
@@ -792,11 +794,58 @@ def faculty_edit(request, email):
         messages.success(request, f'Updated {faculty.display_name}')
         return redirect('faculty_detail', email=email)
 
+    divisions = Division.objects.filter(is_active=True).order_by('name')
+
     return render(request, 'roster/edit.html', {
         'faculty': faculty,
         'rank_choices': FacultyMember.RANK_CHOICES,
         'contract_choices': FacultyMember.CONTRACT_CHOICES,
-        'division_choices': FacultyMember.DIVISION_CHOICES,
+        'divisions': divisions,
+    })
+
+
+def faculty_add(request):
+    """Add a new faculty member."""
+    from .models import Division
+
+    if request.method == 'POST':
+        email = request.POST.get('email', '').strip().lower()
+        first_name = request.POST.get('first_name', '').strip()
+        last_name = request.POST.get('last_name', '').strip()
+
+        # Validate required fields
+        if not email or not first_name or not last_name:
+            messages.error(request, 'Email, first name, and last name are required.')
+            return redirect('faculty_add')
+
+        # Check if email already exists
+        if FacultyMember.objects.filter(email=email).exists():
+            messages.error(request, f'A faculty member with email {email} already exists.')
+            return redirect('faculty_add')
+
+        # Create new faculty member
+        faculty = FacultyMember(
+            email=email,
+            first_name=first_name,
+            last_name=last_name,
+            rank=request.POST.get('rank', ''),
+            contract_type=request.POST.get('contract_type', ''),
+            division=request.POST.get('division', ''),
+            is_active=request.POST.get('is_active') == 'on',
+            is_ccc_member=request.POST.get('is_ccc_member') == 'on',
+        )
+        faculty.save()
+
+        messages.success(request, f'Added {faculty.display_name} to the roster.')
+        return redirect('faculty_detail', email=email)
+
+    # GET request - show form
+    divisions = Division.objects.filter(is_active=True).order_by('name')
+
+    return render(request, 'roster/add.html', {
+        'rank_choices': FacultyMember.RANK_CHOICES,
+        'contract_choices': FacultyMember.CONTRACT_CHOICES,
+        'divisions': divisions,
     })
 
 
@@ -2411,13 +2460,66 @@ def division_update_chief(request, code):
             messages.success(request, f'{chief.display_name} assigned as {division.name} Division Chief')
         except FacultyMember.DoesNotExist:
             messages.error(request, 'Faculty member not found')
-            return redirect('reports:divisions_list')
+            return redirect('divisions_list')
     else:
         division.chief = None
         messages.info(request, f'{division.name} Division Chief cleared')
 
     division.save()
-    return redirect('reports:divisions_list')
+    return redirect('divisions_list')
+
+
+@require_POST
+def division_create(request):
+    """Create a new division."""
+    name = request.POST.get('name', '').strip()
+    code = request.POST.get('code', '').strip().lower().replace(' ', '_')
+
+    if not name or not code:
+        messages.error(request, 'Division name and code are required')
+        return redirect('divisions_list')
+
+    # Check if code already exists
+    if Division.objects.filter(code=code).exists():
+        messages.error(request, f'Division with code "{code}" already exists')
+        return redirect('divisions_list')
+
+    Division.objects.create(code=code, name=name)
+    messages.success(request, f'Division "{name}" created')
+    return redirect('divisions_list')
+
+
+@require_POST
+def division_edit(request, code):
+    """Edit a division's name."""
+    division = get_object_or_404(Division, code=code)
+
+    name = request.POST.get('name', '').strip()
+    if name:
+        division.name = name
+        division.save()
+        messages.success(request, f'Division renamed to "{name}"')
+    else:
+        messages.error(request, 'Division name is required')
+
+    return redirect('divisions_list')
+
+
+@require_POST
+def division_delete(request, code):
+    """Delete a division."""
+    division = get_object_or_404(Division, code=code)
+
+    # Check if any faculty are assigned to this division
+    faculty_count = FacultyMember.objects.filter(division=code).count()
+    if faculty_count > 0:
+        messages.error(request, f'Cannot delete "{division.name}" - {faculty_count} faculty members are assigned to it')
+        return redirect('divisions_list')
+
+    name = division.name
+    division.delete()
+    messages.success(request, f'Division "{name}" deleted')
+    return redirect('divisions_list')
 
 
 # =============================================================================

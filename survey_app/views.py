@@ -472,7 +472,95 @@ def _get_carry_forward_data_for_faculty(faculty, academic_year, exclude_campaign
     Returns:
         dict: Merged carry-forward data from previous submissions
     """
-    # Find all submitted responses from this faculty in this academic year
+    from reports_app.models import FacultySurveyData
+
+    merged_data = {}
+
+    # First, check FacultySurveyData for imported data (from CSV/REDCap)
+    survey_data = FacultySurveyData.objects.filter(
+        faculty=faculty,
+        academic_year=academic_year
+    ).first()
+
+    if survey_data and survey_data.activities_json:
+        activities = survey_data.activities_json if isinstance(survey_data.activities_json, dict) else {}
+
+        # Convert imported data format to survey form format
+        # Imported: {category: {subcat: [entries]}}
+        # Survey form expects: {category: {subcat: {trigger: "yes", entries: [...]}}}
+        carry_forward_subsections = get_carry_forward_subsections()
+
+        # Field name mapping: imported field name -> survey form field name
+        field_name_map = {
+            'rotations': 'rotation_name',  # rotation_director
+            'name': 'committee_name',  # committees (keep 'name' too for backwards compat)
+        }
+
+        def map_field_names(entry):
+            """Map imported field names to survey form field names."""
+            mapped = {}
+            for key, value in entry.items():
+                new_key = field_name_map.get(key, key)
+                mapped[new_key] = value
+                # Also keep original if mapped (for display purposes)
+                if new_key != key:
+                    mapped[key] = value
+            return mapped
+
+        for cat_key, cat_data in activities.items():
+            if not isinstance(cat_data, dict):
+                continue
+            if cat_key not in merged_data:
+                merged_data[cat_key] = {}
+
+            for sub_key, sub_data in cat_data.items():
+                # Check if this subsection carries forward
+                if sub_key not in carry_forward_subsections.get(cat_key, []):
+                    continue
+
+                # Handle list format (imported data)
+                if isinstance(sub_data, list) and sub_data:
+                    entries = []
+                    for entry in sub_data:
+                        entry_copy = map_field_names(entry)
+                        # Use the quarter from the entry, or default to "prior"
+                        quarter = entry.get('quarter', 'prior quarter')
+                        # Simplify quarter display (e.g., "Q1&Q2 (Jul-Sep) & (Oct-Dec)" -> "Q1&Q2")
+                        if quarter and '(' in quarter:
+                            quarter = quarter.split('(')[0].strip()
+                        entry_copy['_carried_from'] = quarter or 'prior quarter'
+                        entries.append(entry_copy)
+                    merged_data[cat_key][sub_key] = {
+                        'trigger': 'yes',
+                        'entries': entries
+                    }
+                # Handle dict format with entries (survey response format)
+                elif isinstance(sub_data, dict) and sub_data.get('entries'):
+                    mapped_entries = []
+                    for entry in sub_data['entries']:
+                        entry_copy = map_field_names(entry)
+                        quarter = entry.get('quarter', 'prior quarter')
+                        if quarter and '(' in quarter:
+                            quarter = quarter.split('(')[0].strip()
+                        entry_copy['_carried_from'] = quarter or 'prior quarter'
+                        mapped_entries.append(entry_copy)
+                    merged_data[cat_key][sub_key] = {
+                        'trigger': 'yes',
+                        'entries': mapped_entries
+                    }
+                # Handle single dict entry (e.g., rotation_director stored as single dict)
+                elif isinstance(sub_data, dict) and sub_data and not sub_data.get('entries'):
+                    entry_copy = map_field_names(sub_data)
+                    quarter = sub_data.get('quarter', 'prior quarter')
+                    if quarter and '(' in quarter:
+                        quarter = quarter.split('(')[0].strip()
+                    entry_copy['_carried_from'] = quarter or 'prior quarter'
+                    merged_data[cat_key][sub_key] = {
+                        'trigger': 'yes',
+                        'entries': [entry_copy]
+                    }
+
+    # Then overlay with any previous SurveyResponse submissions (newer data wins)
     previous_responses = SurveyResponse.objects.filter(
         invitation__faculty=faculty,
         invitation__campaign__academic_year=academic_year,
@@ -482,8 +570,6 @@ def _get_carry_forward_data_for_faculty(faculty, academic_year, exclude_campaign
     ).select_related('invitation__campaign').order_by(
         'invitation__campaign__quarter'  # Earlier quarters first
     )
-
-    merged_data = {}
 
     for resp in previous_responses:
         carry_forward = extract_carry_forward_data(resp.response_data or {})
@@ -518,9 +604,12 @@ def faculty_portal(request, token):
     # Get current academic year
     academic_year = AcademicYear.get_current()
 
-    # Find current open campaign
+    # Find current open campaign (filter by dates since is_open is a property)
+    from django.utils import timezone
+    now = timezone.now()
     current_campaign = SurveyCampaign.objects.filter(
-        status='open',
+        opens_at__lte=now,
+        closes_at__gte=now,
     ).order_by('-opens_at').first()
 
     # If there's an open campaign, get or create the invitation for this faculty
@@ -548,14 +637,65 @@ def faculty_portal(request, token):
     if current_campaign:
         past_submissions = past_submissions.exclude(campaign=current_campaign)
 
-    # Calculate total points for the year
-    from reports_app.models import FacultySurveyData
+    # Get survey data for the year
+    from reports_app.models import FacultySurveyData, DepartmentalData
+    from reports_app.views import get_combined_activities
+    from src.config import ACTIVITY_CATEGORIES, ACTIVITY_DISPLAY_NAMES
+
     survey_data = FacultySurveyData.objects.filter(
         faculty=faculty,
         academic_year=academic_year
     ).first()
 
-    total_points = survey_data.survey_total_points if survey_data else 0
+    # Get departmental data
+    dept_data = DepartmentalData.objects.filter(
+        faculty=faculty,
+        academic_year=academic_year
+    ).first()
+
+    # Build activity sections for read-only display
+    activity_sections = []
+    if survey_data:
+        combined = get_combined_activities(survey_data)
+        for cat_key, cat_info in ACTIVITY_CATEGORIES.items():
+            cat_name = cat_info['name']
+            cat_total = 0
+            subcategories = {}
+            if cat_key in combined:
+                for subcat, entries in combined[cat_key].items():
+                    if not entries:
+                        continue
+                    display_name = ACTIVITY_DISPLAY_NAMES.get(subcat, subcat)
+                    if isinstance(entries, list) and entries:
+                        subcategories[display_name] = entries
+                        for entry in entries:
+                            cat_total += entry.get('points', 0)
+                    elif isinstance(entries, dict) and entries:
+                        if entries.get('points') or entries.get('type') or entries.get('rotations'):
+                            subcategories[display_name] = [entries]
+                            cat_total += entries.get('points', 0)
+            if subcategories:
+                activity_sections.append({
+                    'name': cat_name,
+                    'total': cat_total,
+                    'subcategories': subcategories,
+                })
+
+    # Calculate totals
+    survey_total = survey_data.survey_total_points if survey_data else 0
+    dept_total = dept_data.departmental_total_points if dept_data else 0
+    grand_total = survey_total + dept_total
+
+    # Category point breakdowns
+    category_points = {}
+    if survey_data:
+        category_points = {
+            'citizenship': survey_data.citizenship_points or 0,
+            'education': survey_data.education_points or 0,
+            'research': survey_data.research_points or 0,
+            'leadership': survey_data.leadership_points or 0,
+            'content_expert': survey_data.content_expert_points or 0,
+        }
 
     return render(request, 'survey/faculty/portal.html', {
         'faculty': faculty,
@@ -564,7 +704,12 @@ def faculty_portal(request, token):
         'current_invitation': current_invitation,
         'current_response': current_response,
         'past_submissions': past_submissions,
-        'total_points': total_points,
+        'total_points': grand_total,
+        'survey_total': survey_total,
+        'dept_total': dept_total,
+        'category_points': category_points,
+        'activity_sections': activity_sections,
+        'survey_data': survey_data,
     })
 
 
@@ -650,7 +795,18 @@ def survey_category(request, token, category):
         return redirect('survey:survey_landing', token=token)
 
     # Get or create response
-    response, _ = SurveyResponse.objects.get_or_create(invitation=invitation)
+    response, created = SurveyResponse.objects.get_or_create(invitation=invitation)
+
+    # If new response, pre-populate with carry-forward data
+    if created:
+        carry_forward_data = _get_carry_forward_data_for_faculty(
+            invitation.faculty,
+            invitation.campaign.academic_year,
+            exclude_campaign=invitation.campaign
+        )
+        if carry_forward_data:
+            response.response_data = carry_forward_data
+            response.save(update_fields=['response_data'])
 
     if request.method == 'POST':
         # Process form submission using config
@@ -1198,6 +1354,12 @@ def _process_category_form_from_config(post_data, category_config):
                     if value:
                         entry[field['name']] = value
                         has_data = True
+
+                # Preserve carry-forward marker if present
+                carried_from_field = f"{subsection_key}_{i}__carried_from"
+                carried_from_value = post_data.get(carried_from_field, '').strip()
+                if carried_from_value:
+                    entry['_carried_from'] = carried_from_value
 
                 # Only include entry if it has data and type is not '99' (opt-out)
                 if has_data and entry.get('type') != '99':

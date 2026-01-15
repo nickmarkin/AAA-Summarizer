@@ -210,6 +210,9 @@
 <div class="action-buttons" style="margin-bottom: 20px;">
     <a href="{% url 'faculty_edit' faculty.email %}" class="btn btn-app">Edit Faculty</a>
     <a href="{% url 'faculty_activities' faculty.email %}" class="btn btn-app btn-secondary">View/Edit Activities</a>
+    <a href="{% url 'faculty_portal' faculty.access_token %}" class="btn btn-app btn-secondary" target="_blank">
+        <i class="bi bi-box-arrow-up-right"></i> View Portal
+    </a>
     <a href="{% url 'roster' %}" class="btn btn-app btn-secondary">Back to Roster</a>
 </div>
 

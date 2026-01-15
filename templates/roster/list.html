@@ -184,7 +184,10 @@
 {% block content %}
 <div class="roster-header">
     <div>
-        <a href="{% url 'import_roster' %}" class="btn btn-app btn-sm">Import from CSV</a>
+        <a href="{% url 'faculty_add' %}" class="btn btn-app btn-sm">
+            <i class="bi bi-person-plus"></i> Add Faculty
+        </a>
+        <a href="{% url 'import_roster' %}" class="btn btn-app btn-sm" style="background: #6c757d;">Import from CSV</a>
         <a href="{% url 'export_portal_links' %}" class="btn btn-app btn-sm" style="background: #6c757d;">
             <i class="bi bi-download"></i> Export Portal Links
         </a>
@@ -224,11 +227,12 @@
     <span class="faculty-col faculty-rank">Rank</span>
     <span class="faculty-col faculty-division">Division</span>
     <span class="faculty-col faculty-badges">AY {{ academic_year.year_code }} Surveys</span>
+    <span class="faculty-col" style="width: 50px;"></span>
 </div>
 
 {% for f in faculty %}
-<div class="faculty-card">
-    <a href="{% url 'faculty_detail' f.email %}">
+<div class="faculty-card" style="display: flex; align-items: center;">
+    <a href="{% url 'faculty_detail' f.email %}" style="flex: 1; display: flex;">
         <span class="faculty-col faculty-name">{{ f.display_name }}</span>
         <span class="faculty-col faculty-email">{{ f.email }}</span>
         <span class="faculty-col faculty-rank">{{ f.get_rank_display|default:"-" }}</span>
@@ -249,6 +253,9 @@
                 <span class="data-indicator" title="Has survey data"></span>
             {% endif %}
         </span>
+    </a>
+    <a href="{% url 'faculty_portal' f.access_token %}" class="btn btn-sm btn-outline-primary" style="margin-right: 10px;" title="View as faculty" target="_blank">
+        <i class="bi bi-box-arrow-up-right"></i>
     </a>
 </div>
 {% empty %}

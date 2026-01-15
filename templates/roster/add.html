@@ -1,29 +1,27 @@
 {% extends 'base.html' %}
 
-{% block title %}Edit {{ faculty.display_name }} - Academic Achievement Summarizer{% endblock %}
+{% block title %}Add Faculty Member - Academic Achievement Summarizer{% endblock %}
 
-{% block page_title %}Edit {{ faculty.display_name }}{% endblock %}
+{% block page_title %}Add Faculty Member{% endblock %}
 
 {% block content %}
-<h1>Edit Faculty Member</h1>
-
-<div class="card">
+<div class="card" style="max-width: 600px;">
     <form method="post">
         {% csrf_token %}
 
         <div class="form-group">
-            <label>Email (cannot be changed)</label>
-            <input type="email" value="{{ faculty.email }}" disabled>
+            <label>Email <span style="color: #dc3545;">*</span></label>
+            <input type="email" name="email" required placeholder="faculty@unmc.edu">
         </div>
 
         <div class="form-group">
-            <label>First Name</label>
-            <input type="text" name="first_name" value="{{ faculty.first_name }}" required>
+            <label>First Name <span style="color: #dc3545;">*</span></label>
+            <input type="text" name="first_name" required placeholder="First name">
         </div>
 
         <div class="form-group">
-            <label>Last Name</label>
-            <input type="text" name="last_name" value="{{ faculty.last_name }}" required>
+            <label>Last Name <span style="color: #dc3545;">*</span></label>
+            <input type="text" name="last_name" required placeholder="Last name">
         </div>
 
         <div class="form-group">
@@ -31,7 +29,7 @@
             <select name="rank">
                 <option value="">-- Select --</option>
                 {% for value, label in rank_choices %}
-                <option value="{{ value }}" {% if faculty.rank == value %}selected{% endif %}>{{ label }}</option>
+                <option value="{{ value }}">{{ label }}</option>
                 {% endfor %}
             </select>
         </div>
@@ -41,7 +39,7 @@
             <select name="contract_type">
                 <option value="">-- Select --</option>
                 {% for value, label in contract_choices %}
-                <option value="{{ value }}" {% if faculty.contract_type == value %}selected{% endif %}>{{ label }}</option>
+                <option value="{{ value }}">{{ label }}</option>
                 {% endfor %}
             </select>
         </div>
@@ -51,27 +49,27 @@
             <select name="division">
                 <option value="">-- Select --</option>
                 {% for div in divisions %}
-                <option value="{{ div.code }}" {% if faculty.division == div.code %}selected{% endif %}>{{ div.name }}</option>
+                <option value="{{ div.code }}">{{ div.name }}</option>
                 {% endfor %}
             </select>
         </div>
 
         <div class="form-group">
             <label>
-                <input type="checkbox" name="is_active" {% if faculty.is_active %}checked{% endif %}>
+                <input type="checkbox" name="is_active" checked>
                 Active
             </label>
         </div>
 
         <div class="form-group">
             <label>
-                <input type="checkbox" name="is_ccc_member" {% if faculty.is_ccc_member %}checked{% endif %}>
+                <input type="checkbox" name="is_ccc_member">
                 CCC Member (1,000 points - persists year-to-year)
             </label>
         </div>
 
-        <button type="submit" class="btn">Save Changes</button>
-        <a href="{% url 'faculty_detail' faculty.email %}" class="btn btn-secondary">Cancel</a>
+        <button type="submit" class="btn btn-app">Add Faculty Member</button>
+        <a href="{% url 'roster' %}" class="btn btn-app btn-secondary">Cancel</a>
     </form>
 </div>
 {% endblock %}

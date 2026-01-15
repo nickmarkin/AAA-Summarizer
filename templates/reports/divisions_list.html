@@ -8,19 +8,49 @@
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h2><i class="bi bi-diagram-3"></i> Divisions</h2>
-            <p class="text-muted mb-0">Manage division chiefs and view division faculty</p>
+            <p class="text-muted mb-0">Manage divisions, assign chiefs, and view faculty</p>
         </div>
-        <a href="{% url 'index' %}" class="btn btn-outline-secondary">
-            <i class="bi bi-arrow-left"></i> Dashboard
-        </a>
+        <div>
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addDivisionModal">
+                <i class="bi bi-plus-lg"></i> Add Division
+            </button>
+            <a href="{% url 'index' %}" class="btn btn-outline-secondary ms-2">
+                <i class="bi bi-arrow-left"></i> Dashboard
+            </a>
+        </div>
     </div>
 
     <div class="row">
         {% for item in divisions %}
         <div class="col-md-6 col-lg-4 mb-4">
             <div class="card h-100">
-                <div class="card-header bg-primary text-white">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">{{ item.division.name }}</h5>
+                    <div class="dropdown">
+                        <button class="btn btn-sm btn-outline-light" type="button" data-bs-toggle="dropdown">
+                            <i class="bi bi-three-dots-vertical"></i>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li>
+                                <a class="dropdown-item" href="#" data-bs-toggle="modal"
+                                   data-bs-target="#editModal{{ item.division.code }}">
+                                    <i class="bi bi-pencil"></i> Edit Name
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="{% url 'division_dashboard' code=item.division.code %}">
+                                    <i class="bi bi-speedometer2"></i> Dashboard
+                                </a>
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <a class="dropdown-item text-danger" href="#" data-bs-toggle="modal"
+                                   data-bs-target="#deleteModal{{ item.division.code }}">
+                                    <i class="bi bi-trash"></i> Delete
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
                 </div>
                 <div class="card-body">
                     <div class="mb-3">
@@ -61,16 +91,76 @@
                         No chief assigned
                     </small>
                     {% endif %}
-                    <a href="{% url 'division_dashboard' code=item.division.code %}" class="btn btn-sm btn-outline-primary">
-                        <i class="bi bi-speedometer2"></i> Dashboard
-                    </a>
+                    <small class="text-muted">Code: {{ item.division.code }}</small>
+                </div>
+            </div>
+
+            <!-- Edit Modal -->
+            <div class="modal fade" id="editModal{{ item.division.code }}" tabindex="-1">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <form method="post" action="{% url 'division_edit' code=item.division.code %}">
+                            {% csrf_token %}
+                            <div class="modal-header">
+                                <h5 class="modal-title">Edit Division</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="mb-3">
+                                    <label class="form-label">Division Name</label>
+                                    <input type="text" name="name" class="form-control"
+                                           value="{{ item.division.name }}" required>
+                                </div>
+                                <p class="text-muted small mb-0">
+                                    Code: <code>{{ item.division.code }}</code> (cannot be changed)
+                                </p>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                <button type="submit" class="btn btn-primary">Save Changes</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Delete Modal -->
+            <div class="modal fade" id="deleteModal{{ item.division.code }}" tabindex="-1">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <form method="post" action="{% url 'division_delete' code=item.division.code %}">
+                            {% csrf_token %}
+                            <div class="modal-header">
+                                <h5 class="modal-title text-danger">Delete Division</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <p>Are you sure you want to delete <strong>{{ item.division.name }}</strong>?</p>
+                                {% if item.faculty_count > 0 %}
+                                <div class="alert alert-warning">
+                                    <i class="bi bi-exclamation-triangle"></i>
+                                    This division has {{ item.faculty_count }} faculty members assigned.
+                                    You must reassign them before deleting.
+                                </div>
+                                {% else %}
+                                <p class="text-muted">This action cannot be undone.</p>
+                                {% endif %}
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                <button type="submit" class="btn btn-danger" {% if item.faculty_count > 0 %}disabled{% endif %}>
+                                    Delete Division
+                                </button>
+                            </div>
+                        </form>
+                    </div>
                 </div>
             </div>
         </div>
         {% empty %}
         <div class="col-12">
             <div class="alert alert-info">
-                No divisions configured. Contact system administrator.
+                No divisions configured. Click "Add Division" to create one.
             </div>
         </div>
         {% endfor %}
@@ -78,13 +168,49 @@
 
     <div class="card mt-4">
         <div class="card-header">
-            <h5 class="mb-0"><i class="bi bi-info-circle"></i> About Division Chiefs</h5>
+            <h5 class="mb-0"><i class="bi bi-info-circle"></i> About Divisions</h5>
         </div>
         <div class="card-body">
             <p class="mb-0">
-                Division Chiefs can view a summary of their division's faculty activities and survey responses.
-                They will have access to a personalized dashboard showing only their faculty members.
+                Divisions organize faculty into groups. Each division can have a chief who can view
+                a personalized dashboard showing only their faculty members' activities and survey responses.
+                Faculty are assigned to divisions on their profile page.
             </p>
+        </div>
+    </div>
+</div>
+
+<!-- Add Division Modal -->
+<div class="modal fade" id="addDivisionModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" action="{% url 'division_create' %}">
+                {% csrf_token %}
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-plus-lg"></i> Add Division</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Division Name</label>
+                        <input type="text" name="name" class="form-control"
+                               placeholder="e.g., Cardiac" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Division Code</label>
+                        <input type="text" name="code" class="form-control"
+                               placeholder="e.g., cardiac" required
+                               pattern="[a-z0-9_]+" title="Lowercase letters, numbers, and underscores only">
+                        <div class="form-text">
+                            Lowercase letters, numbers, and underscores only. Used internally.
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Create Division</button>
+                </div>
+            </form>
         </div>
     </div>
 </div>

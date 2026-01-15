@@ -610,19 +610,11 @@ class Division(models.Model):
 
     Division chiefs can view their faculty's survey responses and activities.
     """
-    DIVISION_CODES = [
-        ('cardiac', 'Cardiac'),
-        ('critical_care', 'Critical Care'),
-        ('multispecialty', 'Multispecialty'),
-        ('pain', 'Pain'),
-        ('pediatric', 'Pediatric'),
-    ]
-
     code = models.CharField(
         max_length=50,
-        choices=DIVISION_CODES,
         unique=True,
-        primary_key=True
+        primary_key=True,
+        help_text='Lowercase code used internally (e.g., cardiac, critical_care)'
     )
     name = models.CharField(max_length=100)
     chief = models.ForeignKey(

@@ -16,6 +16,7 @@ urlpatterns = [
 
     # === Faculty Roster Management ===
     path('roster/', views.faculty_roster, name='roster'),
+    path('roster/add/', views.faculty_add, name='faculty_add'),
     path('roster/import/', views.import_roster, name='import_roster'),
     path('roster/export-portal-links/', views.export_portal_links, name='export_portal_links'),
     path('roster/<str:email>/', views.faculty_detail, name='faculty_detail'),
@@ -75,7 +76,10 @@ urlpatterns = [
 
     # === Division Management ===
     path('divisions/', views.divisions_list, name='divisions_list'),
+    path('divisions/create/', views.division_create, name='division_create'),
     path('divisions/<str:code>/update-chief/', views.division_update_chief, name='division_update_chief'),
+    path('divisions/<str:code>/edit/', views.division_edit, name='division_edit'),
+    path('divisions/<str:code>/delete/', views.division_delete, name='division_delete'),
     path('divisions/<str:code>/dashboard/', views.division_dashboard, name='division_dashboard'),
 
     # === Annual View ===

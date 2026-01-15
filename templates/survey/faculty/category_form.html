@@ -116,6 +116,31 @@
             background: #198754;
             border-color: #198754;
         }
+        /* No button default state - light blue to indicate it's the default */
+        .trigger-option input[value="no"] + label {
+            background: #e7f1ff;
+            border-color: #b6d4fe;
+            color: #0d6efd;
+        }
+        .trigger-option input[value="no"] + label:hover {
+            background: #cfe2ff;
+            border-color: #9ec5fe;
+        }
+        /* No button when clicked - dark blue to show selection */
+        .trigger-option input[value="no"]:checked + label {
+            background: #0d6efd;
+            border-color: #0d6efd;
+            color: white;
+        }
+        /* When Yes is selected, make No look neutral (not highlighted) */
+        .trigger-options:has(input[value="yes"]:checked) .trigger-option input[value="no"] + label {
+            background: white;
+            border-color: #dee2e6;
+            color: #212529;
+        }
+        .trigger-options:has(input[value="yes"]:checked) .trigger-option input[value="no"] + label:hover {
+            border-color: #0d6efd;
+        }
 
         /* Entry container */
         .entries-container {
@@ -243,6 +268,13 @@
 </head>
 <body>
     <div class="survey-container">
+        <!-- Back link -->
+        <div class="mb-2">
+            <a href="{% url 'survey:survey_landing' token=invitation.token %}" class="text-white text-decoration-none" style="opacity: 0.8;">
+                <i class="bi bi-arrow-left"></i> Survey Overview
+            </a>
+        </div>
+
         <!-- Header -->
         <div class="survey-header">
             <div class="d-flex justify-content-between align-items-center">
@@ -252,6 +284,9 @@
                 </div>
                 <div class="text-end">
                     <small>{{ invitation.faculty.first_name }} {{ invitation.faculty.last_name }}</small>
+                    <a href="{% url 'faculty_portal' invitation.faculty.access_token %}" class="btn btn-sm btn-outline-light ms-2" title="My Portal">
+                        <i class="bi bi-house-door"></i>
+                    </a>
                 </div>
             </div>
         </div>
@@ -428,9 +463,11 @@
                     <div class="entry-header">
                         <span class="entry-title">${sub.name} #${index + 1}</span>
                         <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeEntry('${sub.key}', ${index})" title="Remove this entry">
-                            <i class="bi bi-trash"></i>
+                            Remove <i class="bi bi-trash"></i>
                         </button>
                     </div>
+                    <!-- Hidden field to preserve carry-forward status -->
+                    <input type="hidden" name="${prefix}__carried_from" id="${prefix}__carried_from" value="">
             `;
 
             // Check if this subsection has a radio field (type selector)
@@ -663,6 +700,12 @@
 
                         // Mark as carried forward if applicable
                         if (carriedFrom) {
+                            // Set the hidden field to preserve carry-forward status on submit
+                            const hiddenField = document.getElementById(`${prefix}__carried_from`);
+                            if (hiddenField) {
+                                hiddenField.value = carriedFrom;
+                            }
+
                             const entryCard = document.getElementById(`entry_${prefix}`);
                             if (entryCard) {
                                 entryCard.classList.add('carried-forward');
