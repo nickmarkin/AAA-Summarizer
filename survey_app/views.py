@@ -502,6 +502,72 @@ def _get_carry_forward_data_for_faculty(faculty, academic_year, exclude_campaign
     return merged_data
 
 
+# =============================================================================
+# FACULTY PORTAL - Permanent link for each faculty member
+# =============================================================================
+
+def faculty_portal(request, token):
+    """
+    Faculty portal - permanent link that shows current survey and history.
+
+    Each faculty member has a unique token that never changes.
+    This is their personal entry point to fill out surveys.
+    """
+    faculty = get_object_or_404(FacultyMember, access_token=token)
+
+    # Get current academic year
+    academic_year = AcademicYear.get_current()
+
+    # Find current open campaign
+    current_campaign = SurveyCampaign.objects.filter(
+        status='open',
+    ).order_by('-opens_at').first()
+
+    # If there's an open campaign, get or create the invitation for this faculty
+    current_invitation = None
+    current_response = None
+    if current_campaign:
+        current_invitation = SurveyInvitation.objects.filter(
+            campaign=current_campaign,
+            faculty=faculty
+        ).first()
+
+        if current_invitation:
+            current_response = SurveyResponse.objects.filter(
+                invitation=current_invitation
+            ).first()
+
+    # Get past submissions for this academic year
+    past_submissions = SurveyInvitation.objects.filter(
+        faculty=faculty,
+        campaign__academic_year=academic_year,
+        status='submitted'
+    ).select_related('campaign').order_by('-submitted_at')
+
+    # Exclude current campaign from past submissions
+    if current_campaign:
+        past_submissions = past_submissions.exclude(campaign=current_campaign)
+
+    # Calculate total points for the year
+    from reports_app.models import FacultySurveyData
+    survey_data = FacultySurveyData.objects.filter(
+        faculty=faculty,
+        academic_year=academic_year
+    ).first()
+
+    total_points = survey_data.survey_total_points if survey_data else 0
+
+    return render(request, 'survey/faculty/portal.html', {
+        'faculty': faculty,
+        'academic_year': academic_year,
+        'current_campaign': current_campaign,
+        'current_invitation': current_invitation,
+        'current_response': current_response,
+        'past_submissions': past_submissions,
+        'total_points': total_points,
+    })
+
+
 def survey_landing(request, token):
     """Landing page after clicking email link."""
     invitation = get_object_or_404(

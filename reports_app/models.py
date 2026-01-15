@@ -8,6 +8,7 @@ This module defines the database schema for persistent storage of:
 - Departmental tracking items
 """
 
+import secrets
 from django.db import models
 from datetime import date
 
@@ -157,6 +158,15 @@ class FacultyMember(models.Model):
         help_text='Include this faculty in AVC point calculations and reports'
     )
 
+    # Permanent access token for faculty portal
+    access_token = models.CharField(
+        max_length=64,
+        unique=True,
+        blank=True,
+        null=True,
+        help_text='Permanent unique link for faculty to access their surveys'
+    )
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -173,10 +183,21 @@ class FacultyMember(models.Model):
     def __str__(self):
         return self.display_name
 
+    def save(self, *args, **kwargs):
+        # Auto-generate access token if not set
+        if not self.access_token:
+            self.access_token = secrets.token_urlsafe(32)
+        super().save(*args, **kwargs)
+
     @property
     def display_name(self):
         """Return name in 'Last, First' format."""
         return f"{self.last_name}, {self.first_name}"
+
+    def get_portal_url(self):
+        """Get the permanent portal URL for this faculty member."""
+        from django.urls import reverse
+        return reverse('faculty_portal', args=[self.access_token])
 
 
 class SurveyImport(models.Model):

@@ -17,6 +17,7 @@ urlpatterns = [
     # === Faculty Roster Management ===
     path('roster/', views.faculty_roster, name='roster'),
     path('roster/import/', views.import_roster, name='import_roster'),
+    path('roster/export-portal-links/', views.export_portal_links, name='export_portal_links'),
     path('roster/<str:email>/', views.faculty_detail, name='faculty_detail'),
     path('roster/<str:email>/edit/', views.faculty_edit, name='faculty_edit'),
     path('roster/<str:email>/toggle-ccc/', views.toggle_ccc, name='toggle_ccc'),

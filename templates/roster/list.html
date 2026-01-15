@@ -185,6 +185,9 @@
 <div class="roster-header">
     <div>
         <a href="{% url 'import_roster' %}" class="btn btn-app btn-sm">Import from CSV</a>
+        <a href="{% url 'export_portal_links' %}" class="btn btn-app btn-sm" style="background: #6c757d;">
+            <i class="bi bi-download"></i> Export Portal Links
+        </a>
     </div>
     <div class="roster-count">{{ faculty|length }} faculty members</div>
 </div>

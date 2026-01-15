@@ -16,6 +16,7 @@ from django.db import transaction
 
 from src import parser, reports, pdf_generator
 from src.roster_parser import parse_roster_csv, import_roster_to_db
+from django.conf import settings
 from .models import (
     AcademicYear,
     FacultyMember,
@@ -2608,3 +2609,28 @@ def division_dashboard(request, code):
         'faculty_with_data': faculty_with_data,
         'avc_eligible_count': avc_eligible_count,
     })
+
+
+def export_portal_links(request):
+    """Export all faculty portal links as CSV."""
+    import csv
+
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="faculty_portal_links.csv"'
+
+    writer = csv.writer(response)
+    writer.writerow(['Last Name', 'First Name', 'Email', 'Division', 'Portal URL'])
+
+    site_url = getattr(settings, 'SITE_URL', 'http://localhost:8001')
+
+    for faculty in FacultyMember.objects.filter(is_active=True).order_by('last_name', 'first_name'):
+        portal_url = f"{site_url}/my/{faculty.access_token}/"
+        writer.writerow([
+            faculty.last_name,
+            faculty.first_name,
+            faculty.email,
+            faculty.get_division_display() or '',
+            portal_url,
+        ])
+
+    return response
