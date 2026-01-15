@@ -1043,6 +1043,12 @@ def calculate_subsection_points(subsection_config, subsection_data):
                         if choice_val == selected_value:
                             entry_points = points
                             break
+                elif not selected_value and entry:
+                    # Fallback: entry exists but no type selected (imported data)
+                    # Give minimum non-zero points from choices
+                    non_zero_points = [pts for _, _, pts in field['choices'] if pts > 0]
+                    if non_zero_points:
+                        entry_points = min(non_zero_points)
 
         # Special handling for peer-reviewed publications (multiply by impact factor)
         if subsection_config['key'] == 'publications_peer':

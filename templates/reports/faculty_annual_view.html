@@ -102,7 +102,8 @@
         </div>
         <div class="card-body">
             {% if cat_key in merged_activities %}
-                {% for sub_key, sub_data in merged_activities|get_item:cat_key|default:"{}".items %}
+                {% with cat_data=merged_activities|get_item:cat_key %}
+                {% for sub_key, sub_data in cat_data.items %}
                 {% if sub_data.entries %}
                 <div class="mb-4">
                     <h6 class="text-uppercase text-muted border-bottom pb-2">
@@ -134,7 +135,9 @@
                                     </td>
                                     <td>
                                         <span class="badge bg-secondary">
-                                            {{ entry._source_quarter|default:entry._carried_from|default:"?" }}
+                                            {% with quarter=entry|get_item:"_source_quarter" carried=entry|get_item:"_carried_from" %}
+                                            {{ quarter|default:carried|default:"?" }}
+                                            {% endwith %}
                                         </span>
                                     </td>
                                 </tr>
@@ -147,6 +150,7 @@
                 {% empty %}
                 <p class="text-muted mb-0">No activities recorded in this category.</p>
                 {% endfor %}
+                {% endwith %}
             {% else %}
             <p class="text-muted mb-0">No activities recorded in this category.</p>
             {% endif %}

@@ -724,9 +724,16 @@ def faculty_detail(request, email):
                         for entry in entries:
                             cat_total += entry.get('points', 0)
                     elif isinstance(entries, dict) and entries:
+                        # Handle {trigger, entries} format from survey responses
+                        if 'entries' in entries:
+                            entry_list = entries.get('entries', [])
+                            if entry_list:
+                                subcategories[display_name] = entry_list
+                                for entry in entry_list:
+                                    cat_total += entry.get('points', 0)
                         # Single entry stored as dict - convert to list
                         # Only include if it has meaningful data
-                        if entries.get('points') or entries.get('type') or entries.get('rotations'):
+                        elif entries.get('points') or entries.get('type') or entries.get('rotations'):
                             subcategories[display_name] = [entries]
                             cat_total += entries.get('points', 0)
             if subcategories:
@@ -789,6 +796,15 @@ def faculty_edit(request, email):
         faculty.division = request.POST.get('division', faculty.division)
         faculty.is_active = request.POST.get('is_active') == 'on'
         faculty.is_ccc_member = request.POST.get('is_ccc_member') == 'on'
+
+        # Handle end_date - can be blank to clear it
+        end_date_str = request.POST.get('end_date', '').strip()
+        if end_date_str:
+            from datetime import datetime
+            faculty.end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+        else:
+            faculty.end_date = None
+
         faculty.save()
 
         messages.success(request, f'Updated {faculty.display_name}')
@@ -1616,8 +1632,12 @@ def activity_category_list(request):
                     for subcat, entries in cat_data.items():
                         if isinstance(entries, list):
                             category_counts[cat_key]['imported'] += len(entries)
-                        elif entries:  # Single entry dict
-                            category_counts[cat_key]['imported'] += 1
+                        elif isinstance(entries, dict):
+                            # Handle {trigger, entries} format from survey responses
+                            if 'entries' in entries:
+                                category_counts[cat_key]['imported'] += len(entries.get('entries', []))
+                            elif entries:  # Single entry dict
+                                category_counts[cat_key]['imported'] += 1
 
         # Count manual activities
         manual = sd.manual_activities_json or {}
@@ -1677,9 +1697,16 @@ def activity_type_list(request, category):
                             subcat_counts[subcat]['entries'] += len(entries)
                             if entries:
                                 subcat_counts[subcat]['faculty_set'].add(sd.faculty.email)
-                        elif entries:
-                            subcat_counts[subcat]['entries'] += 1
-                            subcat_counts[subcat]['faculty_set'].add(sd.faculty.email)
+                        elif isinstance(entries, dict):
+                            # Handle {trigger, entries} format from survey responses
+                            if 'entries' in entries:
+                                entry_list = entries.get('entries', [])
+                                subcat_counts[subcat]['entries'] += len(entry_list)
+                                if entry_list:
+                                    subcat_counts[subcat]['faculty_set'].add(sd.faculty.email)
+                            elif entries:
+                                subcat_counts[subcat]['entries'] += 1
+                                subcat_counts[subcat]['faculty_set'].add(sd.faculty.email)
 
         # Count manual
         manual = sd.manual_activities_json or {}
@@ -1734,7 +1761,15 @@ def activity_role_list(request, category, subcategory):
             cat_data = activities[category]
             if isinstance(cat_data, dict) and subcategory in cat_data:
                 subcat_data = cat_data[subcategory]
-                entries = subcat_data if isinstance(subcat_data, list) else [subcat_data] if subcat_data else []
+                # Handle {trigger, entries} format from survey responses
+                if isinstance(subcat_data, dict) and 'entries' in subcat_data:
+                    entries = subcat_data.get('entries', [])
+                elif isinstance(subcat_data, list):
+                    entries = subcat_data
+                elif subcat_data:
+                    entries = [subcat_data]
+                else:
+                    entries = []
                 for entry in entries:
                     role = entry.get('type') or entry.get('internal_type') or 'Other'
                     if role not in role_counts:
@@ -1817,14 +1852,25 @@ def activity_entries(request, category, subcategory):
                             'index': i,
                             'data': entry,
                         })
-                elif subcat_data:  # Single entry dict
-                    entries.append({
-                        'faculty_email': sd.faculty.email,
-                        'faculty_name': sd.faculty.display_name,
-                        'source': 'REDCap',
-                        'index': 0,
-                        'data': subcat_data,
-                    })
+                elif isinstance(subcat_data, dict):
+                    # Handle {trigger, entries} format from survey responses
+                    if 'entries' in subcat_data:
+                        for i, entry in enumerate(subcat_data.get('entries', [])):
+                            entries.append({
+                                'faculty_email': sd.faculty.email,
+                                'faculty_name': sd.faculty.display_name,
+                                'source': 'REDCap',
+                                'index': i,
+                                'data': entry,
+                            })
+                    elif subcat_data:  # Single entry dict
+                        entries.append({
+                            'faculty_email': sd.faculty.email,
+                            'faculty_name': sd.faculty.display_name,
+                            'source': 'REDCap',
+                            'index': 0,
+                            'data': subcat_data,
+                        })
 
         # Manual entries
         manual = sd.manual_activities_json or {}
@@ -1902,16 +1948,29 @@ def activity_entries_by_role(request, category, subcategory, role):
                                 'index': i,
                                 'data': entry,
                             })
-                elif subcat_data:
-                    entry_role = subcat_data.get('type') or subcat_data.get('internal_type') or 'Other'
-                    if entry_role == role:
-                        entries.append({
-                            'faculty_email': sd.faculty.email,
-                            'faculty_name': sd.faculty.display_name,
-                            'source': 'REDCap',
-                            'index': 0,
-                            'data': subcat_data,
-                        })
+                elif isinstance(subcat_data, dict):
+                    # Handle {trigger, entries} format from survey responses
+                    if 'entries' in subcat_data:
+                        for i, entry in enumerate(subcat_data.get('entries', [])):
+                            entry_role = entry.get('type') or entry.get('internal_type') or 'Other'
+                            if entry_role == role:
+                                entries.append({
+                                    'faculty_email': sd.faculty.email,
+                                    'faculty_name': sd.faculty.display_name,
+                                    'source': 'REDCap',
+                                    'index': i,
+                                    'data': entry,
+                                })
+                    elif subcat_data:
+                        entry_role = subcat_data.get('type') or subcat_data.get('internal_type') or 'Other'
+                        if entry_role == role:
+                            entries.append({
+                                'faculty_email': sd.faculty.email,
+                                'faculty_name': sd.faculty.display_name,
+                                'source': 'REDCap',
+                                'index': 0,
+                                'data': subcat_data,
+                            })
 
         # Manual entries
         manual = sd.manual_activities_json or {}
@@ -1993,8 +2052,17 @@ def faculty_activities(request, email):
                                     manual_index += 1
                                 enriched_entries.append(entry_copy)
                             activity_summary[cat_name][subcat_name] = enriched_entries
-                        elif entries and not isinstance(entries, list):
-                            activity_summary[cat_name][subcat_name] = [entries]
+                        elif isinstance(entries, dict) and entries:
+                            # Handle {trigger, entries} format from survey responses
+                            if 'entries' in entries:
+                                enriched_entries = []
+                                for entry in entries.get('entries', []):
+                                    entry_copy = entry.copy()
+                                    enriched_entries.append(entry_copy)
+                                if enriched_entries:
+                                    activity_summary[cat_name][subcat_name] = enriched_entries
+                            else:
+                                activity_summary[cat_name][subcat_name] = [entries]
 
     years = AcademicYear.objects.all()
 
@@ -2429,7 +2497,7 @@ def divisions_list(request):
     """List all divisions with their chiefs and faculty counts."""
     divisions = Division.objects.all()
 
-    # Enrich with faculty counts
+    # Enrich with faculty counts and faculty list for chief selection
     division_data = []
     for div in divisions:
         faculty = div.get_faculty()
@@ -2438,11 +2506,11 @@ def divisions_list(request):
             'division': div,
             'faculty_count': faculty.count(),
             'avc_eligible_count': avc_eligible.count(),
+            'faculty_list': faculty.order_by('last_name', 'first_name'),
         })
 
     return render(request, 'reports/divisions_list.html', {
         'divisions': division_data,
-        'all_faculty': FacultyMember.objects.filter(is_active=True).order_by('last_name'),
     })
 
 
@@ -2747,14 +2815,14 @@ def export_roster(request):
 
     writer = csv.writer(response)
     writer.writerow([
-        'Email',
-        'First Name',
-        'Last Name',
-        'Rank',
-        'Contract Type',
-        'Division',
-        'Active',
-        'CCC Member'
+        'email',
+        'first_name',
+        'last_name',
+        'rank',
+        'contract_type',
+        'division',
+        'is_active',
+        'is_ccc_member'
     ])
 
     for faculty in FacultyMember.objects.all().order_by('last_name', 'first_name'):
@@ -2765,8 +2833,8 @@ def export_roster(request):
             faculty.rank or '',
             faculty.contract_type or '',
             faculty.division or '',
-            'Yes' if faculty.is_active else 'No',
-            'Yes' if faculty.is_ccc_member else 'No',
+            'yes' if faculty.is_active else 'no',
+            'yes' if faculty.is_ccc_member else 'no',
         ])
 
     return response

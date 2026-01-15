@@ -144,6 +144,14 @@ class FacultyMember(models.Model):
     )
     is_active = models.BooleanField(default=True)
 
+    # End date for departing faculty - if set, they won't get new survey invitations after this date
+    end_date = models.DateField(
+        null=True,
+        blank=True,
+        verbose_name='End Date',
+        help_text='Date faculty is leaving/left. If blank, they receive survey invitations indefinitely.'
+    )
+
     # CCC membership persists year-to-year (1000 points)
     is_ccc_member = models.BooleanField(
         default=False,
@@ -198,6 +206,21 @@ class FacultyMember(models.Model):
         """Get the permanent portal URL for this faculty member."""
         from django.urls import reverse
         return reverse('faculty_portal', args=[self.access_token])
+
+    @property
+    def should_receive_surveys(self):
+        """
+        Check if this faculty should receive survey invitations.
+        Returns True if:
+        - is_active is True
+        - end_date is not set OR end_date is in the future
+        """
+        if not self.is_active:
+            return False
+        if self.end_date is None:
+            return True
+        from datetime import date
+        return self.end_date > date.today()
 
 
 class SurveyImport(models.Model):

@@ -64,6 +64,12 @@
         </div>
 
         <div class="form-group">
+            <label>End Date (optional)</label>
+            <input type="date" name="end_date" value="{{ faculty.end_date|date:'Y-m-d' }}" class="form-control" style="max-width: 200px;">
+            <small class="text-muted">If set, faculty won't receive new survey invitations after this date</small>
+        </div>
+
+        <div class="form-group">
             <label>
                 <input type="checkbox" name="is_ccc_member" {% if faculty.is_ccc_member %}checked{% endif %}>
                 CCC Member (1,000 points - persists year-to-year)

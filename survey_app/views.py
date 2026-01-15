@@ -505,6 +505,11 @@ def _get_carry_forward_data_for_faculty(faculty, academic_year, exclude_campaign
                 # Also keep original if mapped (for display purposes)
                 if new_key != key:
                     mapped[key] = value
+
+            # Use internal_type as 'type' if available (for proper point calculation)
+            if 'internal_type' in entry and entry['internal_type']:
+                mapped['type'] = entry['internal_type']
+
             return mapped
 
         for cat_key, cat_data in activities.items():
@@ -604,27 +609,44 @@ def faculty_portal(request, token):
     # Get current academic year
     academic_year = AcademicYear.get_current()
 
-    # Find current open campaign (filter by dates since is_open is a property)
+    # Find ALL currently open campaigns (filter by dates since is_open is a property)
     from django.utils import timezone
     now = timezone.now()
-    current_campaign = SurveyCampaign.objects.filter(
+    open_campaigns = SurveyCampaign.objects.filter(
         opens_at__lte=now,
         closes_at__gte=now,
-    ).order_by('-opens_at').first()
+    ).order_by('quarter')
 
-    # If there's an open campaign, get or create the invitation for this faculty
-    current_invitation = None
-    current_response = None
-    if current_campaign:
-        current_invitation = SurveyInvitation.objects.filter(
-            campaign=current_campaign,
+    # Get or create invitations for each open campaign
+    # Auto-create invitation if faculty should receive surveys and doesn't have one yet
+    open_surveys = []
+    for campaign in open_campaigns:
+        invitation = SurveyInvitation.objects.filter(
+            campaign=campaign,
             faculty=faculty
         ).first()
 
-        if current_invitation:
-            current_response = SurveyResponse.objects.filter(
-                invitation=current_invitation
+        # Auto-create invitation if faculty should receive surveys
+        if not invitation and faculty.should_receive_surveys:
+            invitation = SurveyInvitation.objects.create(
+                campaign=campaign,
+                faculty=faculty
+            )
+
+        if invitation:
+            response = SurveyResponse.objects.filter(
+                invitation=invitation
             ).first()
+            open_surveys.append({
+                'campaign': campaign,
+                'invitation': invitation,
+                'response': response,
+            })
+
+    # For backward compatibility, also set current_campaign to first open one
+    current_campaign = open_campaigns.first() if open_campaigns.exists() else None
+    current_invitation = open_surveys[0]['invitation'] if open_surveys else None
+    current_response = open_surveys[0]['response'] if open_surveys else None
 
     # Get past submissions for this academic year
     past_submissions = SurveyInvitation.objects.filter(
@@ -633,9 +655,9 @@ def faculty_portal(request, token):
         status='submitted'
     ).select_related('campaign').order_by('-submitted_at')
 
-    # Exclude current campaign from past submissions
-    if current_campaign:
-        past_submissions = past_submissions.exclude(campaign=current_campaign)
+    # Exclude all open campaigns from past submissions
+    if open_campaigns.exists():
+        past_submissions = past_submissions.exclude(campaign__in=open_campaigns)
 
     # Get survey data for the year
     from reports_app.models import FacultySurveyData, DepartmentalData
@@ -666,7 +688,15 @@ def faculty_portal(request, token):
                     if not entries:
                         continue
                     display_name = ACTIVITY_DISPLAY_NAMES.get(subcat, subcat)
-                    if isinstance(entries, list) and entries:
+
+                    # Handle {trigger, entries} format from survey responses
+                    if isinstance(entries, dict) and 'entries' in entries:
+                        entry_list = entries.get('entries', [])
+                        if entry_list:
+                            subcategories[display_name] = entry_list
+                            for entry in entry_list:
+                                cat_total += entry.get('points', 0)
+                    elif isinstance(entries, list) and entries:
                         subcategories[display_name] = entries
                         for entry in entries:
                             cat_total += entry.get('points', 0)
@@ -703,6 +733,7 @@ def faculty_portal(request, token):
         'current_campaign': current_campaign,
         'current_invitation': current_invitation,
         'current_response': current_response,
+        'open_surveys': open_surveys,
         'past_submissions': past_submissions,
         'total_points': grand_total,
         'survey_total': survey_total,
@@ -1375,6 +1406,7 @@ def _process_category_form_from_config(post_data, category_config):
 def _merge_response_to_faculty_data(response):
     """Merge survey response into FacultySurveyData for reports."""
     from reports_app.models import FacultySurveyData
+    from .survey_config import calculate_category_points
 
     invitation = response.invitation
     faculty = invitation.faculty
@@ -1387,24 +1419,47 @@ def _merge_response_to_faculty_data(response):
         academic_year=academic_year,
     )
 
+    # Helper to strip _carried_from markers from entries
+    def strip_carry_forward_markers(data):
+        """Remove _carried_from markers from activities - they shouldn't persist in master data."""
+        if not data:
+            return data
+        cleaned = {}
+        for cat_key, cat_data in data.items():
+            cleaned[cat_key] = {}
+            for sub_key, sub_data in cat_data.items():
+                cleaned[cat_key][sub_key] = {
+                    'trigger': sub_data.get('trigger'),
+                    'entries': [
+                        {k: v for k, v in entry.items() if not k.startswith('_')}
+                        for entry in sub_data.get('entries', [])
+                    ]
+                }
+        return cleaned
+
     # Merge activities - survey data goes into activities_json
     # The response_data structure should match the expected format
     existing = faculty_data.activities_json or {}
 
-    # Deep merge: for each category, update with survey data
+    # Deep merge: for each category, update with survey data (stripped of markers)
+    cleaned_response = strip_carry_forward_markers(response.response_data)
     for category in ['citizenship', 'education', 'research', 'leadership', 'content_expert']:
-        if category in response.response_data:
-            existing[category] = response.response_data[category]
+        if category in cleaned_response:
+            existing[category] = cleaned_response[category]
 
     faculty_data.activities_json = existing
 
-    # Update point totals
-    faculty_data.citizenship_points = response.citizenship_points
-    faculty_data.education_points = response.education_points
-    faculty_data.research_points = response.research_points
-    faculty_data.leadership_points = response.leadership_points
-    faculty_data.content_expert_points = response.content_expert_points
-    faculty_data.survey_total_points = response.total_points
+    # Recalculate points from the cleaned activities (all entries count)
+    faculty_data.citizenship_points = calculate_category_points('citizenship', existing.get('citizenship', {}))
+    faculty_data.education_points = calculate_category_points('education', existing.get('education', {}))
+    faculty_data.research_points = calculate_category_points('research', existing.get('research', {}))
+    faculty_data.leadership_points = calculate_category_points('leadership', existing.get('leadership', {}))
+    faculty_data.content_expert_points = calculate_category_points('content_expert', existing.get('content_expert', {}))
+    faculty_data.survey_total_points = (
+        faculty_data.citizenship_points + faculty_data.education_points +
+        faculty_data.research_points + faculty_data.leadership_points +
+        faculty_data.content_expert_points
+    )
 
     # Update quarters reported
     quarters = set(faculty_data.quarters_reported or [])

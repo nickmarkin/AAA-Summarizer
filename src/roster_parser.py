@@ -35,7 +35,9 @@ from io import StringIO
 RANK_MAPPING = {
     'instructor': 'instructor',
     'assistant professor': 'assistant',
+    'assistant': 'assistant',
     'associate professor': 'associate',
+    'associate': 'associate',
     'professor': 'professor',
 }
 
@@ -45,6 +47,7 @@ CONTRACT_MAPPING = {
     'clinical': 'clinical',
     'early career (yrs 1-3)': 'early_career',
     'early career': 'early_career',
+    'early_career': 'early_career',
 }
 
 
@@ -104,9 +107,17 @@ def parse_roster_csv(file_input):
     # Create mapping from lowercase to actual column names
     col_map = {f.lower().strip(): f for f in fieldnames}
 
-    # Check for required columns (case-insensitive)
+    # Also map space-separated names to underscore versions
+    # e.g., "first name" -> maps to same as "first_name"
+    for f in fieldnames:
+        normalized = f.lower().strip().replace(' ', '_')
+        if normalized not in col_map:
+            col_map[normalized] = f
+
+    # Check for required columns (case-insensitive, allow spaces or underscores)
+    fieldnames_normalized = [f.replace(' ', '_') for f in fieldnames_lower]
     required = ['email', 'first_name', 'last_name']
-    missing = [r for r in required if r not in fieldnames_lower]
+    missing = [r for r in required if r not in fieldnames_lower and r not in fieldnames_normalized]
     if missing:
         raise ValueError(f"CSV missing required columns: {', '.join(missing)}")
 
@@ -125,6 +136,12 @@ def parse_roster_csv(file_input):
         rank = row.get(col_map.get('rank', 'rank'), '')
         contract_type = row.get(col_map.get('contract_type', 'contract_type'), '')
         division = row.get(col_map.get('division', 'division'), '').strip()
+        # Handle both "is_active" and "active" column names
+        is_active = row.get(col_map.get('is_active', ''), '') or row.get(col_map.get('active', ''), '')
+        is_active = is_active.strip().lower() if is_active else ''
+        # Handle both "is_ccc_member" and "ccc member" column names
+        is_ccc_member = row.get(col_map.get('is_ccc_member', ''), '') or row.get(col_map.get('ccc_member', ''), '')
+        is_ccc_member = is_ccc_member.strip().lower() if is_ccc_member else ''
 
         faculty.append({
             'email': email,
@@ -133,6 +150,8 @@ def parse_roster_csv(file_input):
             'rank': normalize_rank(rank),
             'contract_type': normalize_contract(contract_type),
             'division': division,
+            'is_active': is_active in ('yes', 'true', '1', 'y') if is_active else None,
+            'is_ccc_member': is_ccc_member in ('yes', 'true', '1', 'y') if is_ccc_member else None,
         })
 
     return faculty
@@ -184,6 +203,10 @@ def import_roster_to_db(file_input, update_existing=True):
                         existing.contract_type = fac_data['contract_type']
                     if fac_data['division']:
                         existing.division = fac_data['division']
+                    if fac_data.get('is_active') is not None:
+                        existing.is_active = fac_data['is_active']
+                    if fac_data.get('is_ccc_member') is not None:
+                        existing.is_ccc_member = fac_data['is_ccc_member']
                     existing.save()
                     stats['updated'] += 1
                 else:
@@ -197,7 +220,8 @@ def import_roster_to_db(file_input, update_existing=True):
                     rank=fac_data['rank'],
                     contract_type=fac_data['contract_type'],
                     division=fac_data['division'],
-                    is_active=True,
+                    is_active=fac_data.get('is_active', True) if fac_data.get('is_active') is not None else True,
+                    is_ccc_member=fac_data.get('is_ccc_member', False) if fac_data.get('is_ccc_member') is not None else False,
                 )
                 stats['created'] += 1
 
