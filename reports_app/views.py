@@ -2723,7 +2723,7 @@ def export_portal_links(request):
     writer = csv.writer(response)
     writer.writerow(['Last Name', 'First Name', 'Email', 'Division', 'Portal URL'])
 
-    site_url = getattr(settings, 'SITE_URL', 'http://localhost:8001')
+    site_url = request.build_absolute_uri('/')[:-1]  # Auto-detect domain
 
     for faculty in FacultyMember.objects.filter(is_active=True).order_by('last_name', 'first_name'):
         portal_url = f"{site_url}/my/{faculty.access_token}/"
@@ -2733,6 +2733,40 @@ def export_portal_links(request):
             faculty.email,
             faculty.get_division_display() or '',
             portal_url,
+        ])
+
+    return response
+
+
+def export_roster(request):
+    """Export full roster as CSV for editing."""
+    import csv
+
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="faculty_roster.csv"'
+
+    writer = csv.writer(response)
+    writer.writerow([
+        'Email',
+        'First Name',
+        'Last Name',
+        'Rank',
+        'Contract Type',
+        'Division',
+        'Active',
+        'CCC Member'
+    ])
+
+    for faculty in FacultyMember.objects.all().order_by('last_name', 'first_name'):
+        writer.writerow([
+            faculty.email,
+            faculty.first_name,
+            faculty.last_name,
+            faculty.rank or '',
+            faculty.contract_type or '',
+            faculty.division or '',
+            'Yes' if faculty.is_active else 'No',
+            'Yes' if faculty.is_ccc_member else 'No',
         ])
 
     return response

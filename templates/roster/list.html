@@ -118,14 +118,6 @@
         color: #adb5bd;
         border-color: #dee2e6;
     }
-    .data-indicator {
-        width: 16px;
-        height: 16px;
-        border-radius: 50%;
-        background: #28a745;
-        margin-left: 4px;
-        flex-shrink: 0;
-    }
     .roster-header-row {
         display: flex;
         align-items: center;
@@ -188,6 +180,9 @@
             <i class="bi bi-person-plus"></i> Add Faculty
         </a>
         <a href="{% url 'import_roster' %}" class="btn btn-app btn-sm" style="background: #6c757d;">Import from CSV</a>
+        <a href="{% url 'export_roster' %}" class="btn btn-app btn-sm" style="background: #6c757d;">
+            <i class="bi bi-download"></i> Export Roster
+        </a>
         <a href="{% url 'export_portal_links' %}" class="btn btn-app btn-sm" style="background: #6c757d;">
             <i class="bi bi-download"></i> Export Portal Links
         </a>
@@ -249,9 +244,6 @@
                     <span class="text-muted" style="font-size: 12px;">No campaigns</span>
                 {% endfor %}
             {% endwith %}
-            {% if faculty_with_data|get_item:f.email %}
-                <span class="data-indicator" title="Has survey data"></span>
-            {% endif %}
         </span>
     </a>
     <a href="{% url 'faculty_portal' f.access_token %}" class="btn btn-sm btn-outline-primary" style="margin-right: 10px;" title="View as faculty" target="_blank">
