@@ -13,6 +13,7 @@ urlpatterns = [
     path('years/set-current/', views.set_current_year, name='set_current_year'),
     path('years/select/', views.select_year, name='select_year'),
     path('years/create/', views.create_year, name='create_year'),
+    path('toggle-review-mode/', views.toggle_review_mode, name='toggle_review_mode'),
 
     # === Faculty Roster Management ===
     path('roster/', views.faculty_roster, name='roster'),
@@ -82,7 +83,9 @@ urlpatterns = [
     path('divisions/<str:code>/edit/', views.division_edit, name='division_edit'),
     path('divisions/<str:code>/delete/', views.division_delete, name='division_delete'),
     path('divisions/<str:code>/dashboard/', views.division_dashboard, name='division_dashboard'),
+    path('divisions/<str:code>/verify/', views.division_verify, name='division_verify'),
 
     # === Annual View ===
     path('annual/<str:email>/', views.faculty_annual_view, name='faculty_annual_view'),
+    path('annual/<str:email>/review/', views.activity_review_action, name='activity_review_action'),
 ]

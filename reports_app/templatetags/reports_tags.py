@@ -17,3 +17,9 @@ def get_item(dictionary, key):
 def get_attr(obj, attr):
     """Get an attribute from an object."""
     return getattr(obj, attr, None)
+
+
+@register.simple_tag
+def make_review_key(category, subcategory, index):
+    """Build a review lookup key from category, subcategory, and index."""
+    return f"{category}|{subcategory}|{index}"

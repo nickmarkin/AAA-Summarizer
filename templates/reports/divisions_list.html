@@ -71,10 +71,39 @@
                         </form>
                     </div>
 
-                    <div class="d-flex justify-content-between text-muted small">
+                    <div class="d-flex justify-content-between text-muted small mb-3">
                         <span><i class="bi bi-people"></i> {{ item.faculty_count }} Faculty</span>
                         <span><i class="bi bi-award"></i> {{ item.avc_eligible_count }} AVC Eligible</span>
                     </div>
+
+                    <!-- Verification Status -->
+                    {% if academic_year.review_mode_enabled and item.faculty_with_data > 0 %}
+                    <div class="border-top pt-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="small text-muted">Review Progress (AY {{ academic_year.year_code }})</span>
+                            <span class="small">{{ item.verified_faculty_count }}/{{ item.faculty_with_data }}</span>
+                        </div>
+                        <div class="progress" style="height: 8px;">
+                            {% widthratio item.verified_faculty_count item.faculty_with_data 100 as progress %}
+                            <div class="progress-bar {% if item.all_faculty_verified %}bg-success{% else %}bg-primary{% endif %}"
+                                 style="width: {{ progress }}%"></div>
+                        </div>
+                        {% if item.verification %}
+                        <div class="mt-2">
+                            <span class="badge bg-success">
+                                <i class="bi bi-check-circle-fill"></i> Division Verified
+                            </span>
+                            <small class="text-muted ms-1">{{ item.verification.verified_at|date:"M j" }}</small>
+                        </div>
+                        {% elif item.all_faculty_verified %}
+                        <div class="mt-2">
+                            <span class="badge bg-info">
+                                <i class="bi bi-check2-all"></i> All Faculty Verified
+                            </span>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
                 </div>
                 <div class="card-footer bg-light d-flex justify-content-between align-items-center">
                     {% if item.division.chief %}

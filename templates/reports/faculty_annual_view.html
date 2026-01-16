@@ -4,6 +4,50 @@
 
 {% block title %}{{ faculty.display_name }} - Annual View{% endblock %}
 
+{% block extra_css %}
+<style>
+    .review-toolbar {
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 20px;
+    }
+    .activity-row {
+        position: relative;
+    }
+    .activity-row.stricken td {
+        text-decoration: line-through;
+        opacity: 0.5;
+        background: #fff5f5;
+    }
+    .activity-row.flagged td {
+        background: #fff8e6;
+    }
+    .activity-row.verified td {
+        background: #f0fff4;
+    }
+    .review-actions {
+        white-space: nowrap;
+    }
+    .review-btn {
+        padding: 2px 6px;
+        font-size: 12px;
+        margin-left: 2px;
+    }
+    .review-status-badge {
+        font-size: 10px;
+        padding: 2px 6px;
+    }
+    .section-review-bar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container-fluid py-4">
     <div class="d-flex justify-content-between align-items-start mb-4">
@@ -16,11 +60,65 @@
             </p>
         </div>
         <div class="text-end">
+            {% if review_mode and reviewer_division %}
+            <a href="{% url 'division_dashboard' code=reviewer_division.code %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> Back to Dashboard
+            </a>
+            {% else %}
             <a href="{% url 'faculty_summary' %}" class="btn btn-outline-secondary">
                 <i class="bi bi-arrow-left"></i> Faculty Summary
             </a>
+            {% endif %}
         </div>
     </div>
+
+    {% if review_mode %}
+    <!-- Review Mode Toolbar -->
+    <div class="review-toolbar">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h5 class="mb-1">
+                    <i class="bi bi-shield-check text-primary"></i>
+                    Division Chief Review Mode
+                </h5>
+                <p class="text-muted mb-0 small">
+                    Review activities below. You can verify all, verify by section, or review individual activities.
+                </p>
+            </div>
+            <div>
+                {% if annual_review and annual_review.status == 'verified' %}
+                <div class="alert alert-success py-2 px-3 mb-0 d-inline-block">
+                    <i class="bi bi-check-circle-fill"></i>
+                    <strong>Verified</strong>
+                    <small class="ms-2">{{ annual_review.reviewed_at|date:"M j, Y" }}</small>
+                    <form method="post" action="{% url 'activity_review_action' faculty.email %}" class="d-inline ms-2">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="unverify_all">
+                        <button type="submit" class="btn btn-sm btn-outline-secondary">
+                            <i class="bi bi-x"></i> Remove
+                        </button>
+                    </form>
+                </div>
+                {% else %}
+                <form method="post" action="{% url 'activity_review_action' faculty.email %}" class="d-inline">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="verify_all">
+                    <button type="submit" class="btn btn-success">
+                        <i class="bi bi-check-all"></i> Verify All Activities
+                    </button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+        {% if annual_review and annual_review.status == 'has_issues' %}
+        <div class="alert alert-warning mt-3 mb-0">
+            <i class="bi bi-exclamation-triangle"></i>
+            <strong>Has Issues</strong> - Some activities have been stricken or flagged.
+            {% if annual_review.notes %}<br><small>{{ annual_review.notes }}</small>{% endif %}
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
 
     <!-- Points Summary Card -->
     <div class="card mb-4">
@@ -94,11 +192,21 @@
     {% for cat_key, cat_config in category_configs.items %}
     {% with cat_activities=merged_activities|default_if_none:"{}"|yesno:"1,0" %}
     <div class="card mb-4">
-        <div class="card-header">
+        <div class="card-header d-flex justify-content-between align-items-center">
             <h5 class="mb-0">
                 <i class="bi bi-folder"></i> {{ cat_config.name }}
-                <span class="badge bg-secondary ms-2">{{ category_points|default_if_none:0 }} pts</span>
+                <span class="badge bg-secondary ms-2">{{ category_points|get_item:cat_key|default:0 }} pts</span>
             </h5>
+            {% if review_mode %}
+            <form method="post" action="{% url 'activity_review_action' faculty.email %}" class="d-inline">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="verify_section">
+                <input type="hidden" name="category" value="{{ cat_key }}">
+                <button type="submit" class="btn btn-sm btn-outline-success">
+                    <i class="bi bi-check"></i> Verify Section
+                </button>
+            </form>
+            {% endif %}
         </div>
         <div class="card-body">
             {% if cat_key in merged_activities %}
@@ -117,30 +225,82 @@
                             <thead class="table-light">
                                 <tr>
                                     <th>Details</th>
+                                    <th width="80">Points</th>
                                     <th width="100">Quarter</th>
+                                    {% if review_mode %}
+                                    <th width="180">Review</th>
+                                    {% endif %}
                                 </tr>
                             </thead>
                             <tbody>
                                 {% for entry in sub_data.entries %}
-                                <tr>
+                                {% make_review_key cat_key sub_key forloop.counter0 as review_key %}
+                                {% with entry_review=activity_reviews|get_item:review_key %}
+                                <tr class="activity-row {% if entry_review.status %}{{ entry_review.status }}{% endif %}">
                                     <td>
+                                        {% if entry_review.status == 'stricken' %}
+                                        <span class="review-status-badge badge bg-danger me-1">STRICKEN</span>
+                                        {% elif entry_review.status == 'flagged' %}
+                                        <span class="review-status-badge badge bg-warning text-dark me-1">FLAGGED</span>
+                                        {% elif entry_review.status == 'verified' %}
+                                        <span class="review-status-badge badge bg-success me-1">OK</span>
+                                        {% endif %}
                                         {% for key, value in entry.items %}
-                                            {% if not key|slice:":1" == "_" and value %}
+                                            {% if not key|slice:":1" == "_" and value and key != "points" %}
                                             <span class="me-3">
                                                 <small class="text-muted">{{ key|title }}:</small>
                                                 {{ value }}
                                             </span>
                                             {% endif %}
                                         {% endfor %}
+                                        {% if entry_review.notes %}
+                                        <br><small class="text-muted fst-italic">Note: {{ entry_review.notes }}</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-success">{{ entry.points|default:0 }}</span>
                                     </td>
                                     <td>
                                         <span class="badge bg-secondary">
-                                            {% with quarter=entry|get_item:"_source_quarter" carried=entry|get_item:"_carried_from" %}
-                                            {{ quarter|default:carried|default:"?" }}
+                                            {% with quarter=entry|get_item:"_source_quarter" carried=entry|get_item:"_carried_from" source=entry|get_item:"_source" %}
+                                            {{ quarter|default:carried|default:source|default:"?" }}
                                             {% endwith %}
                                         </span>
                                     </td>
+                                    {% if review_mode %}
+                                    <td class="review-actions">
+                                        {% if entry_review.status != 'verified' %}
+                                        <button type="button" class="btn btn-outline-success review-btn"
+                                                onclick="submitReview('{{ faculty.email }}', '{{ cat_key }}', '{{ sub_key }}', {{ forloop.counter0 }}, 'verify')"
+                                                title="Verify this activity">
+                                            <i class="bi bi-check"></i>
+                                        </button>
+                                        {% endif %}
+                                        {% if entry_review.status != 'flagged' %}
+                                        <button type="button" class="btn btn-outline-warning review-btn"
+                                                onclick="openFlagModal('{{ faculty.email }}', '{{ cat_key }}', '{{ sub_key }}', {{ forloop.counter0 }})"
+                                                title="Flag for review">
+                                            <i class="bi bi-flag"></i>
+                                        </button>
+                                        {% endif %}
+                                        {% if entry_review.status != 'stricken' %}
+                                        <button type="button" class="btn btn-outline-danger review-btn"
+                                                onclick="openStrikeModal('{{ faculty.email }}', '{{ cat_key }}', '{{ sub_key }}', {{ forloop.counter0 }})"
+                                                title="Strike this activity">
+                                            <i class="bi bi-x-lg"></i>
+                                        </button>
+                                        {% endif %}
+                                        {% if entry_review.status %}
+                                        <button type="button" class="btn btn-outline-secondary review-btn"
+                                                onclick="submitReview('{{ faculty.email }}', '{{ cat_key }}', '{{ sub_key }}', {{ forloop.counter0 }}, 'clear')"
+                                                title="Clear review status">
+                                            <i class="bi bi-arrow-counterclockwise"></i>
+                                        </button>
+                                        {% endif %}
+                                    </td>
+                                    {% endif %}
                                 </tr>
+                                {% endwith %}
                                 {% endfor %}
                             </tbody>
                         </table>
@@ -167,10 +327,147 @@
     </div>
 </div>
 
+{% if review_mode %}
+<!-- Strike Modal -->
+<div class="modal fade" id="strikeModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" action="{% url 'activity_review_action' faculty.email %}" id="strikeForm">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="strike">
+                <input type="hidden" name="category" id="strike_category">
+                <input type="hidden" name="subcategory" id="strike_subcategory">
+                <input type="hidden" name="activity_index" id="strike_index">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title"><i class="bi bi-x-lg"></i> Strike Activity</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>This will mark the activity as <strong>stricken</strong> (invalid/erroneous).</p>
+                    <div class="mb-3">
+                        <label class="form-label">Reason for striking</label>
+                        <textarea class="form-control" name="notes" rows="2" required placeholder="Explain why this activity is being stricken..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-danger">Strike Activity</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Flag Modal -->
+<div class="modal fade" id="flagModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" action="{% url 'activity_review_action' faculty.email %}" id="flagForm">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="flag">
+                <input type="hidden" name="category" id="flag_category">
+                <input type="hidden" name="subcategory" id="flag_subcategory">
+                <input type="hidden" name="activity_index" id="flag_index">
+                <div class="modal-header bg-warning">
+                    <h5 class="modal-title"><i class="bi bi-flag"></i> Flag Activity</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Flag this activity for follow-up or correction.</p>
+                    <div class="mb-3">
+                        <label class="form-label">Notes / Suggested Correction</label>
+                        <textarea class="form-control" name="notes" rows="3" required placeholder="Describe what needs to be corrected or clarified..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-warning">Flag Activity</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+// Save scroll position before any form submission
+function saveScrollPosition() {
+    sessionStorage.setItem('reviewScrollPos', window.scrollY);
+}
+
+// Restore scroll position on page load
+document.addEventListener('DOMContentLoaded', function() {
+    const savedPos = sessionStorage.getItem('reviewScrollPos');
+    if (savedPos) {
+        window.scrollTo(0, parseInt(savedPos));
+        sessionStorage.removeItem('reviewScrollPos');
+    }
+});
+
+function submitReview(email, category, subcategory, index, action) {
+    saveScrollPosition();
+
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '{% url "activity_review_action" faculty.email %}';
+
+    const csrfInput = document.createElement('input');
+    csrfInput.type = 'hidden';
+    csrfInput.name = 'csrfmiddlewaretoken';
+    csrfInput.value = '{{ csrf_token }}';
+    form.appendChild(csrfInput);
+
+    const fields = {
+        'action': action,
+        'category': category,
+        'subcategory': subcategory,
+        'activity_index': index
+    };
+
+    for (const [name, value] of Object.entries(fields)) {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = name;
+        input.value = value;
+        form.appendChild(input);
+    }
+
+    document.body.appendChild(form);
+    form.submit();
+}
+
+function openStrikeModal(email, category, subcategory, index) {
+    saveScrollPosition();
+    document.getElementById('strike_category').value = category;
+    document.getElementById('strike_subcategory').value = subcategory;
+    document.getElementById('strike_index').value = index;
+    new bootstrap.Modal(document.getElementById('strikeModal')).show();
+}
+
+function openFlagModal(email, category, subcategory, index) {
+    saveScrollPosition();
+    document.getElementById('flag_category').value = category;
+    document.getElementById('flag_subcategory').value = subcategory;
+    document.getElementById('flag_index').value = index;
+    new bootstrap.Modal(document.getElementById('flagModal')).show();
+}
+
+// Save scroll position when modal forms are submitted
+document.querySelectorAll('#strikeForm, #flagForm').forEach(function(form) {
+    form.addEventListener('submit', saveScrollPosition);
+});
+
+// Save scroll position for all other forms (Verify All, Verify Section, etc.)
+document.querySelectorAll('form[action*="review"]').forEach(function(form) {
+    form.addEventListener('submit', saveScrollPosition);
+});
+</script>
+{% endif %}
+
 <style>
 @media print {
-    .btn, nav, .navbar { display: none !important; }
+    .btn, nav, .navbar, .review-toolbar, .review-actions { display: none !important; }
     .card { break-inside: avoid; }
+    .activity-row.stricken td { text-decoration: line-through; opacity: 0.5; }
 }
 </style>
 {% endblock %}

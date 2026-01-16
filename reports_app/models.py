@@ -29,6 +29,10 @@ class AcademicYear(models.Model):
     start_date = models.DateField(help_text='July 1 of start year')
     end_date = models.DateField(help_text='June 30 of end year')
     is_current = models.BooleanField(default=False)
+    review_mode_enabled = models.BooleanField(
+        default=False,
+        help_text='When enabled, division chiefs can review and verify faculty activities'
+    )
 
     class Meta:
         ordering = ['-year_code']
@@ -668,3 +672,168 @@ class Division(models.Model):
     def get_avc_eligible_faculty(self):
         """Get AVC-eligible faculty in this division."""
         return self.get_faculty().filter(is_avc_eligible=True)
+
+
+class DivisionVerification(models.Model):
+    """
+    Tracks when a division chief has verified their division's data.
+
+    After Q4 closes, division chiefs review their dashboard and mark
+    the content as verified. This provides an audit trail.
+    """
+    division = models.ForeignKey(
+        Division,
+        on_delete=models.CASCADE,
+        related_name='verifications'
+    )
+    academic_year = models.ForeignKey(
+        AcademicYear,
+        on_delete=models.CASCADE,
+        related_name='division_verifications'
+    )
+    verified_by = models.ForeignKey(
+        FacultyMember,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='division_verifications_made'
+    )
+    verified_at = models.DateTimeField(auto_now_add=True)
+    notes = models.TextField(blank=True, help_text='Optional notes about the verification')
+
+    class Meta:
+        unique_together = ['division', 'academic_year']
+        ordering = ['-verified_at']
+
+    def __str__(self):
+        return f"{self.division.name} - AY {self.academic_year.year_code} verified"
+
+
+class ActivityReview(models.Model):
+    """
+    Division chief review of individual activities.
+
+    Tracks strike/flag/verify status for each activity entry.
+    Activities are identified by category, subcategory, and index within the array.
+    """
+    REVIEW_STATUS = [
+        ('verified', 'Verified'),
+        ('stricken', 'Stricken'),
+        ('flagged', 'Flagged'),
+    ]
+
+    faculty = models.ForeignKey(
+        FacultyMember,
+        on_delete=models.CASCADE,
+        related_name='activity_reviews'
+    )
+    academic_year = models.ForeignKey(
+        AcademicYear,
+        on_delete=models.CASCADE,
+        related_name='activity_reviews'
+    )
+    # Activity identification
+    category = models.CharField(max_length=50)  # e.g., 'citizenship'
+    subcategory = models.CharField(max_length=100)  # e.g., 'committee_service'
+    activity_index = models.IntegerField()  # Position in the entries array
+    activity_hash = models.CharField(
+        max_length=64,
+        blank=True,
+        help_text='SHA256 hash of activity content for change detection'
+    )
+
+    status = models.CharField(max_length=20, choices=REVIEW_STATUS)
+    reviewed_by = models.ForeignKey(
+        FacultyMember,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='reviews_made'
+    )
+    reviewed_at = models.DateTimeField(auto_now=True)
+    notes = models.TextField(blank=True, help_text='Reason for strike/flag or verification notes')
+
+    # For flagged items - store original and suggested changes
+    original_data = models.JSONField(
+        null=True,
+        blank=True,
+        help_text='Original activity data before any edits'
+    )
+    suggested_edits = models.JSONField(
+        null=True,
+        blank=True,
+        help_text='Suggested changes for flagged items'
+    )
+
+    class Meta:
+        unique_together = ['faculty', 'academic_year', 'category', 'subcategory', 'activity_index']
+        ordering = ['category', 'subcategory', 'activity_index']
+
+    def __str__(self):
+        return f"{self.faculty.display_name} - {self.category}/{self.subcategory}[{self.activity_index}]: {self.status}"
+
+
+class FacultyAnnualReview(models.Model):
+    """
+    Division chief's overall review of a faculty member's annual submission.
+
+    This is the document-level verification that the DC has reviewed
+    all activities for a faculty member.
+    """
+    REVIEW_STATUS = [
+        ('verified', 'Verified'),
+        ('has_issues', 'Has Issues'),
+        ('pending', 'Pending Review'),
+    ]
+
+    faculty = models.ForeignKey(
+        FacultyMember,
+        on_delete=models.CASCADE,
+        related_name='annual_reviews'
+    )
+    academic_year = models.ForeignKey(
+        AcademicYear,
+        on_delete=models.CASCADE,
+        related_name='faculty_annual_reviews'
+    )
+    reviewed_by = models.ForeignKey(
+        FacultyMember,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='annual_reviews_made'
+    )
+    reviewed_at = models.DateTimeField(auto_now=True)
+    status = models.CharField(max_length=20, choices=REVIEW_STATUS, default='pending')
+    notes = models.TextField(blank=True)
+
+    class Meta:
+        unique_together = ['faculty', 'academic_year']
+        ordering = ['-reviewed_at']
+
+    def __str__(self):
+        return f"{self.faculty.display_name} - AY {self.academic_year.year_code}: {self.status}"
+
+    @property
+    def stricken_count(self):
+        """Count of stricken activities."""
+        return ActivityReview.objects.filter(
+            faculty=self.faculty,
+            academic_year=self.academic_year,
+            status='stricken'
+        ).count()
+
+    @property
+    def flagged_count(self):
+        """Count of flagged activities."""
+        return ActivityReview.objects.filter(
+            faculty=self.faculty,
+            academic_year=self.academic_year,
+            status='flagged'
+        ).count()
+
+    @property
+    def verified_count(self):
+        """Count of individually verified activities."""
+        return ActivityReview.objects.filter(
+            faculty=self.faculty,
+            academic_year=self.academic_year,
+            status='verified'
+        ).count()

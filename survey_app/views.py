@@ -727,6 +727,13 @@ def faculty_portal(request, token):
             'content_expert': survey_data.content_expert_points or 0,
         }
 
+    # Check if faculty is a division chief
+    from reports_app.models import Division
+    divisions_led = Division.objects.filter(chief=faculty, is_active=True)
+
+    # Check if review mode is enabled for the academic year
+    review_mode_enabled = academic_year.review_mode_enabled if academic_year else False
+
     return render(request, 'survey/faculty/portal.html', {
         'faculty': faculty,
         'academic_year': academic_year,
@@ -741,6 +748,8 @@ def faculty_portal(request, token):
         'category_points': category_points,
         'activity_sections': activity_sections,
         'survey_data': survey_data,
+        'divisions_led': divisions_led,
+        'review_mode_enabled': review_mode_enabled,
     })
 
 

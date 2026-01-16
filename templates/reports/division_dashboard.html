@@ -154,6 +154,76 @@
     </div>
 </div>
 
+<!-- Verification Status -->
+{% if review_mode_enabled %}
+<div class="mb-4">
+    {% if verification %}
+    <div class="alert alert-success d-flex align-items-center justify-content-between">
+        <div>
+            <i class="bi bi-check-circle-fill me-2"></i>
+            <strong>Division Verified</strong> by {{ verification.verified_by.display_name }} on {{ verification.verified_at|date:"M j, Y" }}
+            {% if verification.notes %}
+            <br><small class="text-muted">{{ verification.notes }}</small>
+            {% endif %}
+        </div>
+        <form method="post" action="{% url 'division_verify' code=division.code %}" style="display: inline;">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="unverify">
+            <button type="submit" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-x-circle"></i> Remove Verification
+            </button>
+        </form>
+    </div>
+    {% else %}
+    <div class="alert {% if all_faculty_verified %}alert-info{% else %}alert-warning{% endif %}">
+        <div class="d-flex align-items-center justify-content-between">
+            <div>
+                {% if all_faculty_verified %}
+                <i class="bi bi-check2-all me-2"></i>
+                <strong>All faculty verified!</strong> - Ready to verify division.
+                {% else %}
+                <i class="bi bi-exclamation-triangle me-2"></i>
+                <strong>Review in progress</strong> - Click each faculty name to review their activities.
+                {% endif %}
+            </div>
+            <div>
+                {% if all_faculty_verified %}
+                <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#verifyModal">
+                    <i class="bi bi-shield-check"></i> Verify Division
+                </button>
+                {% else %}
+                <button type="button" class="btn btn-secondary btn-sm" disabled title="Verify all faculty first">
+                    <i class="bi bi-shield-check"></i> Verify Division
+                </button>
+                {% endif %}
+            </div>
+        </div>
+        <div class="mt-2">
+            <div class="d-flex justify-content-between small mb-1">
+                <span>Faculty Review Progress</span>
+                <span>{{ verified_faculty_count }}/{{ faculty_with_data }} verified</span>
+            </div>
+            <div class="progress" style="height: 10px;">
+                {% if faculty_with_data > 0 %}
+                {% widthratio verified_faculty_count faculty_with_data 100 as progress %}
+                <div class="progress-bar {% if all_faculty_verified %}bg-success{% else %}bg-primary{% endif %}"
+                     style="width: {{ progress }}%"></div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% else %}
+<div class="mb-4">
+    <div class="alert alert-secondary">
+        <i class="bi bi-lock me-2"></i>
+        <strong>Review mode is not enabled.</strong>
+        Contact an administrator to enable review mode for AY {{ academic_year.year_code }} after all surveys are closed.
+    </div>
+</div>
+{% endif %}
+
 <div class="table-container">
     <table class="summary-table">
         <thead>
@@ -168,14 +238,14 @@
                 <th style="width: 80px;">Content</th>
                 <th style="width: 80px;">Dept</th>
                 <th style="width: 90px;">Total</th>
-                <th style="width: 50px;">View</th>
+                <th style="width: 100px;">Review</th>
             </tr>
         </thead>
         <tbody>
             {% for item in summary_data %}
             <tr>
                 <td>
-                    <a href="{% url 'faculty_annual_view' item.faculty.email %}" class="faculty-link">
+                    <a href="{% url 'faculty_annual_view' item.faculty.email %}?review=1" class="faculty-link">
                         {{ item.faculty.display_name }}
                     </a>
                 </td>
@@ -217,12 +287,32 @@
                     {{ item.grand_total }}
                 </td>
                 <td>
-                    {% if item.quarters_submitted > 0 %}
-                    <a href="{% url 'faculty_annual_view' item.faculty.email %}" class="text-muted" title="View Annual Summary">
-                        <i class="bi bi-calendar-range"></i>
-                    </a>
+                    {% if review_mode_enabled %}
+                        {% if item.annual_review and item.annual_review.status == 'verified' %}
+                        <span class="badge bg-success" title="Verified">
+                            <i class="bi bi-check-circle-fill"></i>
+                        </span>
+                        {% elif item.annual_review and item.annual_review.status == 'has_issues' %}
+                        <span class="badge bg-warning text-dark" title="Has issues">
+                            <i class="bi bi-exclamation-triangle"></i>
+                            {% if item.review_counts.flagged %}<small>{{ item.review_counts.flagged }}F</small>{% endif %}
+                            {% if item.review_counts.stricken %}<small>{{ item.review_counts.stricken }}S</small>{% endif %}
+                        </span>
+                        {% elif item.has_survey_data %}
+                        <a href="{% url 'faculty_annual_view' item.faculty.email %}?review=1" class="btn btn-sm btn-outline-primary" title="Review activities">
+                            <i class="bi bi-shield-check"></i>
+                        </a>
+                        {% else %}
+                        <span class="text-muted">-</span>
+                        {% endif %}
                     {% else %}
-                    <span class="text-muted">-</span>
+                        {% if item.has_survey_data %}
+                        <a href="{% url 'faculty_annual_view' item.faculty.email %}" class="btn btn-sm btn-outline-secondary" title="View activities">
+                            <i class="bi bi-eye"></i>
+                        </a>
+                        {% else %}
+                        <span class="text-muted">-</span>
+                        {% endif %}
                     {% endif %}
                 </td>
             </tr>
@@ -245,7 +335,40 @@
 
 <style>
 @media print {
-    .btn, nav, .navbar { display: none !important; }
+    .btn, nav, .navbar, .alert { display: none !important; }
 }
 </style>
+
+<!-- Verification Modal -->
+<div class="modal fade" id="verifyModal" tabindex="-1" aria-labelledby="verifyModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" action="{% url 'division_verify' code=division.code %}">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="verify">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="verifyModalLabel">
+                        <i class="bi bi-check-circle text-success"></i>
+                        Verify Division Content
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>You are about to verify that you have reviewed the academic achievement data for <strong>{{ division.name }}</strong> division for AY {{ academic_year.year_code }}.</p>
+                    <p class="text-muted small">This confirms that you have reviewed the faculty activities and point totals shown on this dashboard.</p>
+                    <div class="mb-3">
+                        <label for="notes" class="form-label">Notes (optional)</label>
+                        <textarea class="form-control" id="notes" name="notes" rows="2" placeholder="Any comments about the verification..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="bi bi-check-lg"></i> Confirm Verification
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 {% endblock %}

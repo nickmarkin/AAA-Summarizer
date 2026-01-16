@@ -27,6 +27,9 @@ from .models import (
     ActivityGoal,
     ActivityType,
     Division,
+    DivisionVerification,
+    ActivityReview,
+    FacultyAnnualReview,
 )
 
 
@@ -117,6 +120,21 @@ def index(request):
         'stats': stats,
         'academic_year': academic_year,
     })
+
+
+@require_POST
+def toggle_review_mode(request):
+    """Toggle review mode for the current academic year."""
+    academic_year = AcademicYear.get_current()
+    academic_year.review_mode_enabled = not academic_year.review_mode_enabled
+    academic_year.save()
+
+    if academic_year.review_mode_enabled:
+        messages.success(request, f'Review mode enabled for AY {academic_year.year_code}. Division chiefs can now review and verify faculty activities.')
+    else:
+        messages.info(request, f'Review mode disabled for AY {academic_year.year_code}.')
+
+    return redirect('index')
 
 
 @require_http_methods(["POST"])
@@ -2496,21 +2514,48 @@ def verify_impact_factors(request):
 def divisions_list(request):
     """List all divisions with their chiefs and faculty counts."""
     divisions = Division.objects.all()
+    academic_year = AcademicYear.get_current()
 
-    # Enrich with faculty counts and faculty list for chief selection
+    # Enrich with faculty counts, verification status, and faculty list for chief selection
     division_data = []
     for div in divisions:
         faculty = div.get_faculty()
         avc_eligible = div.get_avc_eligible_faculty()
+        faculty_count = faculty.count()
+
+        # Get division verification status
+        div_verification = DivisionVerification.objects.filter(
+            division=div,
+            academic_year=academic_year
+        ).first()
+
+        # Count faculty with verified annual reviews
+        verified_faculty_count = FacultyAnnualReview.objects.filter(
+            faculty__in=faculty,
+            academic_year=academic_year,
+            status='verified'
+        ).count()
+
+        # Count faculty with any data (eligible for review)
+        faculty_with_data = FacultySurveyData.objects.filter(
+            faculty__in=faculty,
+            academic_year=academic_year
+        ).count()
+
         division_data.append({
             'division': div,
-            'faculty_count': faculty.count(),
+            'faculty_count': faculty_count,
             'avc_eligible_count': avc_eligible.count(),
             'faculty_list': faculty.order_by('last_name', 'first_name'),
+            'verification': div_verification,
+            'verified_faculty_count': verified_faculty_count,
+            'faculty_with_data': faculty_with_data,
+            'all_faculty_verified': faculty_with_data > 0 and verified_faculty_count >= faculty_with_data,
         })
 
     return render(request, 'reports/divisions_list.html', {
         'divisions': division_data,
+        'academic_year': academic_year,
     })
 
 
@@ -2600,7 +2645,8 @@ def faculty_annual_view(request, email):
     from survey_app.survey_config import SURVEY_CATEGORIES, get_carry_forward_subsections
 
     faculty = get_object_or_404(FacultyMember, email=email)
-    academic_year = get_academic_year()
+    academic_year = AcademicYear.get_current()
+    academic_year_code = academic_year.year_code
 
     # Get all survey responses for this faculty in the current academic year
     responses = SurveyResponse.objects.filter(
@@ -2608,10 +2654,15 @@ def faculty_annual_view(request, email):
         invitation__campaign__academic_year=academic_year,
     ).select_related('invitation__campaign').order_by('invitation__campaign__quarter')
 
+    # Also get FacultySurveyData (imported/manual data)
+    survey_data = FacultySurveyData.objects.filter(
+        faculty=faculty,
+        academic_year=academic_year
+    ).first()
+
     # Merge all response data and track source quarters
     merged_activities = {}
     quarters_responded = []
-    total_points = 0
     category_points = {
         'citizenship': 0,
         'education': 0,
@@ -2622,6 +2673,48 @@ def faculty_annual_view(request, email):
 
     carry_forward_subs = get_carry_forward_subsections()
 
+    # First, include data from FacultySurveyData (imported/manual activities)
+    if survey_data:
+        combined = get_combined_activities(survey_data)
+        for cat_key, cat_data in combined.items():
+            if cat_key not in merged_activities:
+                merged_activities[cat_key] = {}
+
+            for sub_key, entries in cat_data.items():
+                is_carry_forward = cat_key in carry_forward_subs and sub_key in carry_forward_subs.get(cat_key, [])
+
+                if sub_key not in merged_activities[cat_key]:
+                    merged_activities[cat_key][sub_key] = {
+                        'entries': [],
+                        'is_carry_forward': is_carry_forward,
+                    }
+
+                # Handle different entry formats
+                if isinstance(entries, dict) and 'entries' in entries:
+                    entry_list = entries.get('entries', [])
+                elif isinstance(entries, list):
+                    entry_list = entries
+                elif isinstance(entries, dict):
+                    entry_list = [entries] if entries else []
+                else:
+                    entry_list = []
+
+                for entry in entry_list:
+                    if not entry:
+                        continue
+                    entry_copy = entry.copy() if isinstance(entry, dict) else {'value': entry}
+                    if '_source' not in entry_copy:
+                        entry_copy['_source'] = 'imported'
+                    merged_activities[cat_key][sub_key]['entries'].append(entry_copy)
+
+        # Use points from FacultySurveyData
+        category_points['citizenship'] = survey_data.citizenship_points or 0
+        category_points['education'] = survey_data.education_points or 0
+        category_points['research'] = survey_data.research_points or 0
+        category_points['leadership'] = survey_data.leadership_points or 0
+        category_points['content_expert'] = survey_data.content_expert_points or 0
+
+    # Then add/merge data from SurveyResponse (web survey data)
     for resp in responses:
         quarter = resp.invitation.campaign.quarter
         quarters_responded.append({
@@ -2648,7 +2741,9 @@ def faculty_annual_view(request, email):
 
                 # For carry-forward items, only include from first quarter they appear
                 if is_carry_forward and sub_key in merged_activities[cat_key]:
-                    continue
+                    # Skip if we already have entries from import or earlier quarter
+                    if merged_activities[cat_key][sub_key]['entries']:
+                        continue
 
                 if sub_key not in merged_activities[cat_key]:
                     merged_activities[cat_key][sub_key] = {
@@ -2659,19 +2754,32 @@ def faculty_annual_view(request, email):
                 entries = sub_data.get('entries', [])
                 for entry in entries:
                     entry_copy = entry.copy()
-                    # Don't overwrite _carried_from if already set
                     if '_source_quarter' not in entry_copy:
                         entry_copy['_source_quarter'] = quarter
+                    entry_copy['_source'] = 'survey'
                     merged_activities[cat_key][sub_key]['entries'].append(entry_copy)
 
-    # Calculate points (only counting non-carried items)
-    for resp in responses:
-        if resp.invitation.status == 'submitted':
-            category_points['citizenship'] += resp.citizenship_points or 0
-            category_points['education'] += resp.education_points or 0
-            category_points['research'] += resp.research_points or 0
-            category_points['leadership'] += resp.leadership_points or 0
-            category_points['content_expert'] += resp.content_expert_points or 0
+    # If we have SurveyResponse data, use those points instead (they're more current)
+    if responses.exists():
+        # Reset and recalculate from survey responses
+        survey_points = {
+            'citizenship': 0,
+            'education': 0,
+            'research': 0,
+            'leadership': 0,
+            'content_expert': 0,
+        }
+        for resp in responses:
+            if resp.invitation.status == 'submitted':
+                survey_points['citizenship'] += resp.citizenship_points or 0
+                survey_points['education'] += resp.education_points or 0
+                survey_points['research'] += resp.research_points or 0
+                survey_points['leadership'] += resp.leadership_points or 0
+                survey_points['content_expert'] += resp.content_expert_points or 0
+
+        # Use survey points if they have any submitted responses
+        if any(v > 0 for v in survey_points.values()):
+            category_points = survey_points
 
     total_points = sum(category_points.values())
 
@@ -2681,6 +2789,43 @@ def faculty_annual_view(request, email):
         if cat_key in SURVEY_CATEGORIES:
             category_configs[cat_key] = SURVEY_CATEGORIES[cat_key]
 
+    # Check for review mode (division chief viewing)
+    # Only allow if review_mode_enabled for the academic year
+    review_mode = False
+    reviewer_division = None
+
+    if request.GET.get('review') == '1' and academic_year.review_mode_enabled:
+        review_mode = True
+        # Check if faculty belongs to a division with a chief
+        if faculty.division:
+            reviewer_division = Division.objects.filter(
+                code=faculty.division,
+                is_active=True,
+                chief__isnull=False
+            ).first()
+
+    # Get existing reviews for this faculty/year
+    activity_reviews = {}
+    if review_mode:
+        for review in ActivityReview.objects.filter(
+            faculty=faculty,
+            academic_year=academic_year
+        ):
+            key = f"{review.category}|{review.subcategory}|{review.activity_index}"
+            activity_reviews[key] = {
+                'status': review.status,
+                'notes': review.notes,
+                'reviewed_at': review.reviewed_at,
+            }
+
+    # Get overall annual review
+    annual_review = None
+    if review_mode:
+        annual_review = FacultyAnnualReview.objects.filter(
+            faculty=faculty,
+            academic_year=academic_year
+        ).first()
+
     return render(request, 'reports/faculty_annual_view.html', {
         'faculty': faculty,
         'academic_year': academic_year,
@@ -2689,6 +2834,10 @@ def faculty_annual_view(request, email):
         'category_configs': category_configs,
         'category_points': category_points,
         'total_points': total_points,
+        'review_mode': review_mode,
+        'reviewer_division': reviewer_division,
+        'activity_reviews': activity_reviews,
+        'annual_review': annual_review,
     })
 
 
@@ -2702,6 +2851,12 @@ def division_dashboard(request, code):
 
     division = get_object_or_404(Division, code=code)
     academic_year = get_academic_year()
+
+    # Get verification status for this division/year
+    verification = DivisionVerification.objects.filter(
+        division=division,
+        academic_year=academic_year
+    ).first()
 
     # Get faculty in this division
     faculty_list = division.get_faculty().order_by('last_name', 'first_name')
@@ -2751,6 +2906,25 @@ def division_dashboard(request, code):
         quarters = faculty_quarters.get(faculty.email, [])
         quarters_submitted = [q for q in quarters if q['status'] == 'submitted']
 
+        # Get review status
+        annual_review = FacultyAnnualReview.objects.filter(
+            faculty=faculty,
+            academic_year=academic_year
+        ).first()
+
+        # Count activity reviews
+        review_counts = {
+            'verified': ActivityReview.objects.filter(
+                faculty=faculty, academic_year=academic_year, status='verified'
+            ).count(),
+            'flagged': ActivityReview.objects.filter(
+                faculty=faculty, academic_year=academic_year, status='flagged'
+            ).count(),
+            'stricken': ActivityReview.objects.filter(
+                faculty=faculty, academic_year=academic_year, status='stricken'
+            ).count(),
+        }
+
         summary_data.append({
             'faculty': faculty,
             'citizenship': citizenship,
@@ -2764,12 +2938,21 @@ def division_dashboard(request, code):
             'has_survey_data': survey is not None,
             'quarters': quarters,
             'quarters_submitted': len(quarters_submitted),
+            'annual_review': annual_review,
+            'review_counts': review_counts,
         })
 
     # Calculate totals
     total_faculty = len(summary_data)
     faculty_with_data = sum(1 for s in summary_data if s['has_survey_data'])
     avc_eligible_count = sum(1 for s in summary_data if s['faculty'].is_avc_eligible)
+
+    # Check if all faculty with data are verified
+    verified_faculty_count = sum(
+        1 for s in summary_data
+        if s['annual_review'] and s['annual_review'].status == 'verified'
+    )
+    all_faculty_verified = faculty_with_data > 0 and verified_faculty_count >= faculty_with_data
 
     return render(request, 'reports/division_dashboard.html', {
         'division': division,
@@ -2778,7 +2961,194 @@ def division_dashboard(request, code):
         'total_faculty': total_faculty,
         'faculty_with_data': faculty_with_data,
         'avc_eligible_count': avc_eligible_count,
+        'verification': verification,
+        'verified_faculty_count': verified_faculty_count,
+        'all_faculty_verified': all_faculty_verified,
+        'review_mode_enabled': academic_year.review_mode_enabled,
     })
+
+
+def division_verify(request, code):
+    """
+    Handle division verification - create or remove verification record.
+
+    Division chiefs use this to mark their division's content as verified
+    after reviewing the dashboard.
+    """
+    if request.method != 'POST':
+        return redirect('division_dashboard', code=code)
+
+    division = get_object_or_404(Division, code=code)
+    academic_year = get_academic_year()
+    action = request.POST.get('action')
+
+    if action == 'verify':
+        # Create verification record
+        # Use the division chief as the verifier, or None if no chief assigned
+        DivisionVerification.objects.update_or_create(
+            division=division,
+            academic_year=academic_year,
+            defaults={
+                'verified_by': division.chief,
+                'notes': request.POST.get('notes', ''),
+            }
+        )
+    elif action == 'unverify':
+        # Remove verification record
+        DivisionVerification.objects.filter(
+            division=division,
+            academic_year=academic_year
+        ).delete()
+
+    return redirect('division_dashboard', code=code)
+
+
+@require_POST
+def activity_review_action(request, email):
+    """
+    Handle activity review actions (verify, flag, strike, clear).
+
+    Division chiefs use this to review individual activities or entire submissions.
+    """
+    faculty = get_object_or_404(FacultyMember, email=email)
+    academic_year = AcademicYear.get_current()
+    action = request.POST.get('action')
+
+    # Get the division chief (reviewer) - use the division's chief
+    reviewer = None
+    if faculty.division:
+        division = Division.objects.filter(code=faculty.division, is_active=True).first()
+        if division:
+            reviewer = division.chief
+
+    if action == 'verify_all':
+        # Create/update overall annual review as verified
+        FacultyAnnualReview.objects.update_or_create(
+            faculty=faculty,
+            academic_year=academic_year,
+            defaults={
+                'status': 'verified',
+                'reviewed_by': reviewer,
+                'notes': '',
+            }
+        )
+
+    elif action == 'unverify_all':
+        # Remove overall verification
+        FacultyAnnualReview.objects.filter(
+            faculty=faculty,
+            academic_year=academic_year
+        ).delete()
+        # Also clear all individual activity reviews
+        ActivityReview.objects.filter(
+            faculty=faculty,
+            academic_year=academic_year
+        ).delete()
+
+    elif action == 'verify_section':
+        # Verify all activities in a category/section
+        category = request.POST.get('category')
+        if category:
+            # Get all activities in this category and mark them verified
+            # We need to count how many entries exist in this category
+            survey_data = FacultySurveyData.objects.filter(
+                faculty=faculty,
+                academic_year=academic_year
+            ).first()
+
+            if survey_data:
+                combined = get_combined_activities(survey_data)
+                if category in combined:
+                    for sub_key, entries in combined[category].items():
+                        if isinstance(entries, dict) and 'entries' in entries:
+                            entry_list = entries.get('entries', [])
+                        elif isinstance(entries, list):
+                            entry_list = entries
+                        else:
+                            entry_list = [entries] if entries else []
+
+                        for idx in range(len(entry_list)):
+                            ActivityReview.objects.update_or_create(
+                                faculty=faculty,
+                                academic_year=academic_year,
+                                category=category,
+                                subcategory=sub_key,
+                                activity_index=idx,
+                                defaults={
+                                    'status': 'verified',
+                                    'reviewed_by': reviewer,
+                                    'notes': '',
+                                }
+                            )
+
+    elif action in ('verify', 'flag', 'strike', 'clear'):
+        # Handle individual activity review
+        category = request.POST.get('category')
+        subcategory = request.POST.get('subcategory')
+        activity_index = request.POST.get('activity_index')
+        notes = request.POST.get('notes', '')
+
+        if category and subcategory and activity_index is not None:
+            try:
+                activity_index = int(activity_index)
+            except ValueError:
+                pass
+            else:
+                if action == 'clear':
+                    # Remove the review
+                    ActivityReview.objects.filter(
+                        faculty=faculty,
+                        academic_year=academic_year,
+                        category=category,
+                        subcategory=subcategory,
+                        activity_index=activity_index,
+                    ).delete()
+                else:
+                    # Map action to status
+                    status_map = {
+                        'verify': 'verified',
+                        'flag': 'flagged',
+                        'strike': 'stricken',
+                    }
+                    status = status_map.get(action)
+
+                    if status:
+                        ActivityReview.objects.update_or_create(
+                            faculty=faculty,
+                            academic_year=academic_year,
+                            category=category,
+                            subcategory=subcategory,
+                            activity_index=activity_index,
+                            defaults={
+                                'status': status,
+                                'reviewed_by': reviewer,
+                                'notes': notes,
+                            }
+                        )
+
+                        # If we have any stricken or flagged items, update annual review status
+                        has_issues = ActivityReview.objects.filter(
+                            faculty=faculty,
+                            academic_year=academic_year,
+                            status__in=['stricken', 'flagged']
+                        ).exists()
+
+                        if has_issues:
+                            FacultyAnnualReview.objects.update_or_create(
+                                faculty=faculty,
+                                academic_year=academic_year,
+                                defaults={
+                                    'status': 'has_issues',
+                                    'reviewed_by': reviewer,
+                                }
+                            )
+
+    # Redirect back with review mode enabled
+    # Use HTTP_REFERER to preserve scroll position via hash, or fallback to annual view
+    referer = request.META.get('HTTP_REFERER', '')
+    if referer:
+        return redirect(referer)
+    return redirect(f"/reports/annual/{email}/?review=1")
 
 
 def export_portal_links(request):
