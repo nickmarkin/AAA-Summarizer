@@ -2398,6 +2398,23 @@ def activity_type_edit(request, pk):
     })
 
 
+@require_POST
+def activity_type_quick_edit(request, pk):
+    """Quick inline edit for activity type base points."""
+    activity_type = get_object_or_404(ActivityType, pk=pk)
+
+    base_points = request.POST.get('base_points', '')
+    if base_points:
+        try:
+            activity_type.base_points = int(base_points)
+            activity_type.save(update_fields=['base_points'])
+            messages.success(request, f'Updated {activity_type.display_name} to {base_points} points')
+        except ValueError:
+            messages.error(request, 'Invalid points value')
+
+    return redirect('activity_points_config')
+
+
 def activity_type_create(request):
     """Create a new activity type."""
     categories = ActivityCategory.objects.filter(is_active=True).prefetch_related('goals')

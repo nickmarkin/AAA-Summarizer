@@ -68,12 +68,23 @@
         border-radius: 4px;
         font-weight: 600;
         font-size: 13px;
+        cursor: pointer;
+        border: none;
+    }
+    .points-badge:hover {
+        background: #219a52;
     }
     .points-badge.impact-factor {
         background: #9b59b6;
     }
+    .points-badge.impact-factor:hover {
+        background: #8e44ad;
+    }
     .points-badge.count {
         background: #3498db;
+    }
+    .points-badge.count:hover {
+        background: #2980b9;
     }
     .modifier-tag {
         font-size: 11px;
@@ -126,6 +137,45 @@
         font-size: 12px;
         color: #666;
         text-transform: uppercase;
+    }
+    /* Inline edit styling */
+    .inline-edit-form {
+        display: none;
+        align-items: center;
+        gap: 5px;
+    }
+    .inline-edit-form.show {
+        display: inline-flex;
+    }
+    .inline-edit-form input[type="number"] {
+        width: 80px;
+        padding: 3px 8px;
+        border: 1px solid #0d6efd;
+        border-radius: 4px;
+        font-size: 13px;
+        font-weight: 600;
+    }
+    .inline-edit-form button {
+        padding: 3px 8px;
+        font-size: 12px;
+        border: none;
+        border-radius: 3px;
+        cursor: pointer;
+    }
+    .inline-edit-form .save-btn {
+        background: #28a745;
+        color: white;
+    }
+    .inline-edit-form .cancel-btn {
+        background: #dc3545;
+        color: white;
+    }
+    .points-display {
+        display: inline-flex;
+        align-items: center;
+    }
+    .points-display.hidden {
+        display: none;
     }
 </style>
 {% endblock %}
@@ -181,17 +231,35 @@
                     </td>
                     <td><span class="data-var">{{ activity.data_variable }}</span></td>
                     <td>
-                        <span class="points-badge {% if activity.modifier_type == 'impact_factor' %}impact-factor{% elif activity.modifier_type == 'count' %}count{% endif %}">
-                            {{ activity.base_points }}
+                        <!-- Points display (clickable to edit) -->
+                        <span class="points-display" id="display-{{ activity.pk }}">
+                            <button type="button" class="points-badge {% if activity.modifier_type == 'impact_factor' %}impact-factor{% elif activity.modifier_type == 'count' %}count{% endif %}"
+                                    onclick="showInlineEdit({{ activity.pk }}, {{ activity.base_points }})"
+                                    title="Click to edit points">
+                                {{ activity.base_points }}
+                            </button>
+                            {% if activity.modifier_type == 'count' %}
+                                <span class="modifier-tag">x count</span>
+                            {% elif activity.modifier_type == 'impact_factor' %}
+                                <span class="modifier-tag">x IF</span>
+                            {% endif %}
+                            {% if activity.max_points %}
+                                <span class="modifier-tag">(max {{ activity.max_points }})</span>
+                            {% endif %}
                         </span>
-                        {% if activity.modifier_type == 'count' %}
-                            <span class="modifier-tag">x count</span>
-                        {% elif activity.modifier_type == 'impact_factor' %}
-                            <span class="modifier-tag">x IF</span>
-                        {% endif %}
-                        {% if activity.max_points %}
-                            <span class="modifier-tag">(max {{ activity.max_points }})</span>
-                        {% endif %}
+                        <!-- Inline edit form (hidden by default) -->
+                        <form class="inline-edit-form" id="form-{{ activity.pk }}"
+                              action="{% url 'activity_type_quick_edit' activity.pk %}" method="post">
+                            {% csrf_token %}
+                            <input type="number" name="base_points" id="input-{{ activity.pk }}"
+                                   value="{{ activity.base_points }}" min="0" step="1">
+                            <button type="submit" class="save-btn" title="Save">
+                                <i class="bi bi-check"></i>
+                            </button>
+                            <button type="button" class="cancel-btn" onclick="hideInlineEdit({{ activity.pk }})" title="Cancel">
+                                <i class="bi bi-x"></i>
+                            </button>
+                        </form>
                     </td>
                     <td style="font-size: 12px; color: #666;">{{ activity.notes|truncatewords:10 }}</td>
                     <td>
@@ -205,4 +273,35 @@
     {% endfor %}
 </div>
 {% endfor %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+function showInlineEdit(pk, currentValue) {
+    // Hide display, show form
+    document.getElementById('display-' + pk).classList.add('hidden');
+    document.getElementById('form-' + pk).classList.add('show');
+
+    // Focus and select the input
+    const input = document.getElementById('input-' + pk);
+    input.focus();
+    input.select();
+}
+
+function hideInlineEdit(pk) {
+    // Show display, hide form
+    document.getElementById('display-' + pk).classList.remove('hidden');
+    document.getElementById('form-' + pk).classList.remove('show');
+}
+
+// Handle Escape key to cancel editing
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        document.querySelectorAll('.inline-edit-form.show').forEach(function(form) {
+            const pk = form.id.replace('form-', '');
+            hideInlineEdit(pk);
+        });
+    }
+});
+</script>
 {% endblock %}

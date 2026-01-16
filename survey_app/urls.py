@@ -42,4 +42,10 @@ urlpatterns = [
     # ==========================================================================
     path('faculty/login/', views.faculty_login, name='faculty_login'),
     path('faculty/my-survey/', views.faculty_my_survey, name='faculty_my_survey'),
+
+    # ==========================================================================
+    # Demo/Preview Views (no token required)
+    # ==========================================================================
+    path('demo/', views.survey_demo_landing, name='survey_demo'),
+    path('demo/category/<str:category>/', views.survey_demo_category, name='survey_demo_category'),
 ]

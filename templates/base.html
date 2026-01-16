@@ -312,6 +312,10 @@
                 <h4 class="mb-0">{% block page_title %}{% endblock %}</h4>
             </div>
             <div class="d-flex align-items-center gap-3">
+                <!-- Help Button -->
+                <button type="button" class="btn btn-link text-secondary p-0" data-bs-toggle="modal" data-bs-target="#helpModal" title="Help & Instructions">
+                    <i class="bi bi-info-circle" style="font-size: 1.25rem;"></i>
+                </button>
                 <!-- Year Selector -->
                 <form action="{% url 'select_year' %}" method="get" class="d-flex align-items-center gap-2">
                     <label for="year-select" class="text-muted mb-0" style="font-size: 14px;">Academic Year:</label>
@@ -352,6 +356,253 @@
                 </div>
             {% endfor %}
         {% endif %}
+    </div>
+
+    <!-- Help Modal -->
+    <div class="modal fade" id="helpModal" tabindex="-1" aria-labelledby="helpModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="helpModalLabel">
+                        <i class="bi bi-info-circle me-2"></i>
+                        Academic Achievement Award System - User Guide
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="accordion" id="helpAccordion">
+                        <!-- Overview -->
+                        <div class="accordion-item">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#helpOverview">
+                                    <i class="bi bi-house me-2"></i> Overview
+                                </button>
+                            </h2>
+                            <div id="helpOverview" class="accordion-collapse collapse show" data-bs-parent="#helpAccordion">
+                                <div class="accordion-body">
+                                    <p>This system tracks academic achievements for the UNMC Department of Anesthesiology. It supports:</p>
+                                    <ul>
+                                        <li><strong>Faculty self-reporting</strong> via quarterly web surveys</li>
+                                        <li><strong>REDCap import</strong> for legacy data</li>
+                                        <li><strong>Departmental data entry</strong> for awards and evaluations</li>
+                                        <li><strong>Division chief review</strong> and verification</li>
+                                        <li><strong>Report generation</strong> for AVC documentation</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Annual Setup -->
+                        <div class="accordion-item">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#helpSetup">
+                                    <i class="bi bi-calendar-plus me-2"></i> Step 1: Annual Setup (Start of Year)
+                                </button>
+                            </h2>
+                            <div id="helpSetup" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
+                                <div class="accordion-body">
+                                    <h6>A. Create Academic Year</h6>
+                                    <ol>
+                                        <li>Go to <strong>Configuration → Academic Years</strong></li>
+                                        <li>The system auto-creates the current year, but you can add future years</li>
+                                        <li>Make sure the correct year is selected in the top-right dropdown</li>
+                                    </ol>
+
+                                    <h6>B. Update Faculty Roster</h6>
+                                    <ol>
+                                        <li>Go to <strong>Faculty Roster</strong></li>
+                                        <li>Import from Faculty Calculator CSV, or add faculty manually</li>
+                                        <li>Set division, rank, and AVC eligibility for each faculty member</li>
+                                        <li>Mark inactive faculty with an end date (they won't receive surveys)</li>
+                                    </ol>
+
+                                    <h6>C. Set Up Divisions</h6>
+                                    <ol>
+                                        <li>Go to <strong>Configuration → Divisions</strong></li>
+                                        <li>Create divisions if needed (Cardiac, Critical Care, etc.)</li>
+                                        <li>Assign a Division Chief to each division</li>
+                                    </ol>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Survey Campaigns -->
+                        <div class="accordion-item">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#helpCampaigns">
+                                    <i class="bi bi-send-check me-2"></i> Step 2: Survey Campaigns (Quarterly)
+                                </button>
+                            </h2>
+                            <div id="helpCampaigns" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
+                                <div class="accordion-body">
+                                    <h6>A. Create a Campaign</h6>
+                                    <ol>
+                                        <li>Go to <strong>Survey Campaigns</strong></li>
+                                        <li>Click <strong>New Campaign</strong></li>
+                                        <li>Select quarter (Q1-Q2, Q3, or Q4) and academic year</li>
+                                        <li>Set open and close dates</li>
+                                        <li>Save the campaign</li>
+                                    </ol>
+
+                                    <h6>B. Send Invitations</h6>
+                                    <ol>
+                                        <li>Open the campaign and click <strong>Create Invitations</strong></li>
+                                        <li>System creates unique links for all active, survey-eligible faculty</li>
+                                        <li>Click <strong>Send Emails</strong> to send invitation emails</li>
+                                        <li>Faculty click the link to access their personal survey</li>
+                                    </ol>
+
+                                    <h6>C. Monitor Progress</h6>
+                                    <ul>
+                                        <li>View response status on the campaign page</li>
+                                        <li>Send reminders to those who haven't completed</li>
+                                        <li>Faculty can save drafts and return later</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Departmental Data -->
+                        <div class="accordion-item">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#helpDeptData">
+                                    <i class="bi bi-clipboard-data me-2"></i> Step 3: Departmental Data Entry
+                                </button>
+                            </h2>
+                            <div id="helpDeptData" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
+                                <div class="accordion-body">
+                                    <p>Some data comes from department tracking, not faculty self-reporting:</p>
+                                    <ol>
+                                        <li>Go to <strong>Departmental Data</strong></li>
+                                        <li>Select a faculty member</li>
+                                        <li>Enter data for:
+                                            <ul>
+                                                <li><strong>Evaluations:</strong> New innovations, MyTip winner/count</li>
+                                                <li><strong>Teaching Awards:</strong> Top 25%, 25-65%, Teacher of Year</li>
+                                            </ul>
+                                        </li>
+                                        <li>Points are calculated automatically</li>
+                                    </ol>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Division Chief Review -->
+                        <div class="accordion-item">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#helpReview">
+                                    <i class="bi bi-shield-check me-2"></i> Step 4: Division Chief Review (After Q4)
+                                </button>
+                            </h2>
+                            <div id="helpReview" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
+                                <div class="accordion-body">
+                                    <h6>A. Enable Review Mode (Admin)</h6>
+                                    <ol>
+                                        <li>After Q4 survey closes, go to <strong>Dashboard</strong></li>
+                                        <li>Click <strong>Enable Review Mode</strong></li>
+                                        <li>This unlocks verification features for division chiefs</li>
+                                    </ol>
+
+                                    <h6>B. Division Chief Review Process</h6>
+                                    <ol>
+                                        <li>Division chiefs access their portal (via bookmarked link)</li>
+                                        <li>Click <strong>Division Dashboard</strong> link</li>
+                                        <li>Click each faculty name to review their activities</li>
+                                        <li>For each activity, choose:
+                                            <ul>
+                                                <li><span class="badge bg-success">✓ Verify</span> - Activity is correct</li>
+                                                <li><span class="badge bg-warning text-dark">⚑ Flag</span> - Needs correction/clarification</li>
+                                                <li><span class="badge bg-danger">✗ Strike</span> - Remove (erroneous/invalid)</li>
+                                            </ul>
+                                        </li>
+                                        <li>Use <strong>Verify All</strong> for quick approval of all activities</li>
+                                        <li>Once all faculty verified, click <strong>Verify Division</strong></li>
+                                    </ol>
+
+                                    <h6>C. Track Progress</h6>
+                                    <ul>
+                                        <li>Dashboard shows progress bar for each division</li>
+                                        <li><strong>Configuration → Divisions</strong> shows overall verification status</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Reports -->
+                        <div class="accordion-item">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#helpReports">
+                                    <i class="bi bi-file-earmark-text me-2"></i> Step 5: Generate Reports
+                                </button>
+                            </h2>
+                            <div id="helpReports" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
+                                <div class="accordion-body">
+                                    <ol>
+                                        <li>Go to <strong>Reports</strong></li>
+                                        <li>Available exports:
+                                            <ul>
+                                                <li><strong>Points Summary CSV</strong> - All faculty points in spreadsheet format</li>
+                                                <li><strong>Faculty Summaries</strong> - Individual PDF/Markdown reports</li>
+                                                <li><strong>Activity Reports</strong> - By activity type</li>
+                                            </ul>
+                                        </li>
+                                        <li>Select faculty and format, then download</li>
+                                    </ol>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Faculty Portal -->
+                        <div class="accordion-item">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#helpPortal">
+                                    <i class="bi bi-person-badge me-2"></i> Faculty Portal (For Faculty)
+                                </button>
+                            </h2>
+                            <div id="helpPortal" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
+                                <div class="accordion-body">
+                                    <p>Each faculty member has a personal portal link they can bookmark:</p>
+                                    <ul>
+                                        <li>View current point totals by category</li>
+                                        <li>See all submitted activities</li>
+                                        <li>Access open surveys to submit new activities</li>
+                                        <li>Division chiefs see a link to their division dashboard</li>
+                                    </ul>
+                                    <p class="text-muted small">
+                                        Portal links are in the format: <code>/my/&lt;token&gt;/</code><br>
+                                        Export all portal links from <strong>Faculty Roster → Export Portal Links</strong>
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Tips -->
+                        <div class="accordion-item">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#helpTips">
+                                    <i class="bi bi-lightbulb me-2"></i> Tips & Best Practices
+                                </button>
+                            </h2>
+                            <div id="helpTips" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
+                                <div class="accordion-body">
+                                    <ul>
+                                        <li><strong>Academic Year selector</strong> (top-right) controls which year's data you see</li>
+                                        <li><strong>CCC Membership</strong> is tracked on faculty profiles and carries forward</li>
+                                        <li><strong>Annual/carry-forward items</strong> (board prep, pathways, etc.) only need to be reported once per year</li>
+                                        <li><strong>Incomplete submissions</strong> are flagged but still included in reports</li>
+                                        <li><strong>REDCap import</strong> can supplement or replace web survey data</li>
+                                        <li><strong>Division verification</strong> provides audit trail for AVC documentation</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Bootstrap 5 JS -->

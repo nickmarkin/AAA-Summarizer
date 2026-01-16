@@ -1,0 +1,545 @@
+{% load survey_tags %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ category_config.name }} - Survey Preview</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        body {
+            background: #f5f5f5;
+            min-height: 100vh;
+        }
+        .demo-banner {
+            background: #ffc107;
+            color: #333;
+            padding: 10px 15px;
+            text-align: center;
+            font-weight: 500;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+        .survey-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .survey-header {
+            background: #212529;
+            color: white;
+            padding: 20px;
+            border-radius: 8px 8px 0 0;
+        }
+        .category-tabs {
+            background: #fff;
+            border-bottom: 1px solid #dee2e6;
+        }
+        .category-tabs .nav-link {
+            color: #666;
+            border: none;
+            border-bottom: 3px solid transparent;
+            border-radius: 0;
+            padding: 12px 16px;
+            font-size: 14px;
+        }
+        .category-tabs .nav-link.active {
+            color: #0d6efd;
+            border-bottom-color: #0d6efd;
+        }
+        .survey-form {
+            background: white;
+            padding: 30px;
+            border-radius: 0 0 8px 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        /* Subsection styling */
+        .subsection {
+            margin-bottom: 30px;
+            padding-bottom: 25px;
+            border-bottom: 2px solid #e9ecef;
+        }
+        .subsection:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+        }
+        .subsection-header {
+            margin-bottom: 20px;
+        }
+        .subsection-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        /* Trigger question styling */
+        .trigger-question {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 15px;
+        }
+        .trigger-question label {
+            font-weight: 500;
+            margin-bottom: 12px;
+            display: block;
+        }
+        .trigger-options {
+            display: flex;
+            gap: 15px;
+        }
+        .trigger-option {
+            flex: 0 0 auto;
+        }
+        .trigger-option input[type="radio"] {
+            display: none;
+        }
+        .trigger-option label {
+            display: inline-block;
+            padding: 10px 30px;
+            border: 2px solid #dee2e6;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: normal;
+            margin-bottom: 0;
+            transition: all 0.2s;
+        }
+        .trigger-option label:hover {
+            border-color: #0d6efd;
+        }
+        .trigger-option input:checked + label {
+            background: #0d6efd;
+            border-color: #0d6efd;
+            color: white;
+        }
+        .trigger-option input[value="yes"]:checked + label {
+            background: #198754;
+            border-color: #198754;
+        }
+        .trigger-option input[value="no"] + label {
+            background: #e7f1ff;
+            border-color: #b6d4fe;
+            color: #0d6efd;
+        }
+        .trigger-option input[value="no"]:checked + label {
+            background: #0d6efd;
+            border-color: #0d6efd;
+            color: white;
+        }
+        .trigger-options:has(input[value="yes"]:checked) .trigger-option input[value="no"] + label {
+            background: white;
+            border-color: #dee2e6;
+            color: #212529;
+        }
+
+        /* Entry container */
+        .entries-container {
+            display: none;
+            margin-top: 20px;
+        }
+        .entries-container.show {
+            display: block;
+        }
+
+        /* Individual entry */
+        .entry-card {
+            background: #fafafa;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 15px;
+            display: none;
+        }
+        .entry-card.show {
+            display: block;
+        }
+        .entry-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #e9ecef;
+        }
+        .entry-title {
+            font-weight: 600;
+            color: #495057;
+        }
+
+        /* Radio choices for entry type */
+        .type-choices {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+        .type-choice {
+            display: flex;
+            align-items: flex-start;
+        }
+        .type-choice input[type="radio"] {
+            margin-top: 4px;
+            margin-right: 10px;
+        }
+        .type-choice label {
+            cursor: pointer;
+            flex: 1;
+        }
+
+        /* Add another button */
+        .add-another {
+            display: none;
+            margin-top: 15px;
+        }
+        .add-another.show {
+            display: block;
+        }
+        .add-another-btn {
+            background: transparent;
+            border: 2px dashed #0d6efd;
+            color: #0d6efd;
+            padding: 12px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            width: 100%;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        .add-another-btn:hover {
+            background: #e7f1ff;
+        }
+
+        /* Navigation bar */
+        .nav-bar {
+            position: sticky;
+            bottom: 0;
+            background: white;
+            border-top: 2px solid #dee2e6;
+            padding: 15px 30px;
+            margin: 30px -30px -30px -30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="demo-banner">
+        <i class="bi bi-eye"></i> PREVIEW MODE - This shows what faculty will see (changes are not saved)
+    </div>
+
+    <div class="survey-container">
+        <!-- Back link -->
+        <div class="mb-2">
+            <a href="{% url 'survey:survey_demo' %}" class="text-dark text-decoration-none">
+                <i class="bi bi-arrow-left"></i> Survey Overview
+            </a>
+        </div>
+
+        <!-- Header -->
+        <div class="survey-header">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h4 class="mb-1"><i class="bi bi-award"></i> Academic Achievement Survey</h4>
+                    <small class="opacity-75">Survey Preview</small>
+                </div>
+                <div class="text-end">
+                    <small>Sample Faculty</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Category Tabs -->
+        <nav class="category-tabs">
+            <ul class="nav nav-tabs border-0">
+                {% for nav_cat in nav_categories %}
+                <li class="nav-item">
+                    <a class="nav-link {% if nav_cat.active %}active{% endif %}"
+                       href="{% url 'survey:survey_demo_category' category=nav_cat.key %}">
+                        {{ nav_cat.name }}
+                    </a>
+                </li>
+                {% endfor %}
+            </ul>
+        </nav>
+
+        <!-- Form (display only, no submit) -->
+        <div class="survey-form">
+            <div class="mb-4">
+                <h4>{{ category_config.name }}</h4>
+                <p class="text-muted mb-0">{{ category_config.description }}</p>
+            </div>
+
+            <!-- Subsections rendered by JavaScript -->
+            <div id="formContent"></div>
+
+            <!-- Navigation -->
+            <div class="nav-bar">
+                <div>
+                    {% if prev_category %}
+                    <a href="{% url 'survey:survey_demo_category' category=prev_category %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left"></i> Previous
+                    </a>
+                    {% endif %}
+                </div>
+                <div>
+                    {% if next_category %}
+                    <a href="{% url 'survey:survey_demo_category' category=next_category %}" class="btn btn-primary">
+                        Next Category <i class="bi bi-arrow-right"></i>
+                    </a>
+                    {% else %}
+                    <a href="{% url 'survey:survey_demo' %}" class="btn btn-success">
+                        <i class="bi bi-check-circle"></i> Back to Overview
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Config from server
+        const config = {{ category_config|to_json|safe }};
+
+        // Track state
+        const state = {
+            subsections: {}
+        };
+
+        function init() {
+            renderForm();
+        }
+
+        function renderForm() {
+            const container = document.getElementById('formContent');
+            let html = '';
+
+            config.subsections.forEach((sub, idx) => {
+                state.subsections[sub.key] = {
+                    triggerValue: null,
+                    entryCount: 0,
+                    entries: []
+                };
+                html += renderSubsection(sub, idx);
+            });
+
+            container.innerHTML = html;
+            attachEventListeners();
+        }
+
+        function renderSubsection(sub, idx) {
+            const triggerName = `${sub.key}_trigger`;
+            const carryForwardNote = sub.carry_forward
+                ? '<small class="text-muted d-block mb-2"><i class="bi bi-arrow-repeat"></i> Report once per year - carries forward to future quarters</small>'
+                : '';
+
+            let html = `
+                <div class="subsection" data-subsection="${sub.key}">
+                    <div class="subsection-header">
+                        <div class="subsection-title">${sub.name}</div>
+                        ${carryForwardNote}
+                    </div>
+            `;
+
+            // Trigger question
+            if (sub.trigger) {
+                html += `
+                    <div class="trigger-question">
+                        <label>${sub.trigger.label}</label>
+                        ${sub.trigger.help_text ? `<small class="text-muted d-block mb-2">${sub.trigger.help_text}</small>` : ''}
+                        <div class="trigger-options">
+                            <div class="trigger-option">
+                                <input type="radio" name="${triggerName}" id="${triggerName}_yes" value="yes"
+                                       onchange="handleTriggerChange('${sub.key}', 'yes')">
+                                <label for="${triggerName}_yes">Yes</label>
+                            </div>
+                            <div class="trigger-option">
+                                <input type="radio" name="${triggerName}" id="${triggerName}_no" value="no"
+                                       onchange="handleTriggerChange('${sub.key}', 'no')">
+                                <label for="${triggerName}_no">No</label>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Entries container (for repeating types)
+            if (sub.type === 'repeating') {
+                html += `
+                    <div class="entries-container" id="entries_${sub.key}">
+                        <div class="entries-list" id="entrieslist_${sub.key}"></div>
+                        <div class="add-another show" id="addmore_${sub.key}">
+                            <button type="button" class="add-another-btn" onclick="addEntry('${sub.key}')">
+                                <i class="bi bi-plus-lg"></i> ${sub.add_another_label || 'Add another?'}
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Single type (just yes/no trigger, no entries needed)
+            if (sub.type === 'single') {
+                html += `
+                    <div class="entries-container" id="entries_${sub.key}">
+                        <div class="alert alert-success">
+                            <i class="bi bi-check-circle"></i> Noted. This will be recorded when saved.
+                        </div>
+                    </div>
+                `;
+            }
+
+            html += `</div>`;
+            return html;
+        }
+
+        function renderEntry(sub, index) {
+            const prefix = `${sub.key}_${index}`;
+
+            let html = `
+                <div class="entry-card show" id="entry_${prefix}" data-index="${index}">
+                    <div class="entry-header">
+                        <span class="entry-title">${sub.name} #${index + 1}</span>
+                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeEntry('${sub.key}', ${index})" title="Remove">
+                            Remove <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
+            `;
+
+            // Check if this subsection has a radio field (type selector)
+            const hasRadioField = sub.fields.some(f => f.type === 'radio');
+
+            // Render radio fields first
+            sub.fields.forEach(field => {
+                if (field.type === 'radio' && field.choices) {
+                    html += `<div class="mb-3">`;
+                    html += `<label class="form-label">${field.label}</label>`;
+                    html += '<div class="type-choices">';
+                    field.choices.forEach(([val, label, pts]) => {
+                        html += `
+                            <div class="type-choice">
+                                <input type="radio" name="${prefix}_${field.name}"
+                                       id="${prefix}_${field.name}_${val}" value="${val}"
+                                       onchange="handleTypeSelection('${prefix}', '${val}')">
+                                <label for="${prefix}_${field.name}_${val}">${label}</label>
+                            </div>
+                        `;
+                    });
+                    html += '</div>';
+                    html += `</div>`;
+                }
+            });
+
+            // Render non-radio fields
+            const nonRadioFields = sub.fields.filter(f => f.type !== 'radio');
+            if (nonRadioFields.length > 0 && hasRadioField) {
+                html += `<div class="entry-details" id="details_${prefix}" style="display: none;">`;
+            }
+
+            nonRadioFields.forEach(field => {
+                const requiredStar = field.required ? ' <span class="text-danger">*</span>' : '';
+                const hideForTypes = field.hide_for_types ? ` data-hide-for-types="${field.hide_for_types.join(',')}"` : '';
+
+                html += `<div class="mb-3 field-container" data-field="${field.name}"${hideForTypes}>`;
+                html += `<label class="form-label">${field.label}${requiredStar}</label>`;
+
+                if (field.type === 'text') {
+                    html += `<input type="text" class="form-control" name="${prefix}_${field.name}" disabled>`;
+                } else if (field.type === 'date') {
+                    html += `<input type="date" class="form-control" name="${prefix}_${field.name}" disabled>`;
+                } else if (field.type === 'number') {
+                    const maxAttr = field.max ? ` max="${field.max}"` : '';
+                    html += `<input type="number" class="form-control" name="${prefix}_${field.name}" min="0"${maxAttr} step="0.1" disabled>`;
+                }
+
+                html += `</div>`;
+            });
+
+            if (nonRadioFields.length > 0 && hasRadioField) {
+                html += `</div>`;
+            }
+
+            html += `</div>`;
+            return html;
+        }
+
+        function showEntryDetails(prefix) {
+            const detailsEl = document.getElementById(`details_${prefix}`);
+            if (detailsEl) {
+                detailsEl.style.display = 'block';
+            }
+        }
+
+        function handleTypeSelection(prefix, selectedType) {
+            showEntryDetails(prefix);
+
+            const entryCard = document.getElementById(`entry_${prefix}`);
+            if (!entryCard) return;
+
+            // Show/hide fields based on hide_for_types
+            entryCard.querySelectorAll('.field-container[data-hide-for-types]').forEach(container => {
+                const hideForTypes = container.getAttribute('data-hide-for-types').split(',');
+                if (hideForTypes.includes(selectedType)) {
+                    container.style.display = 'none';
+                } else {
+                    container.style.display = 'block';
+                }
+            });
+        }
+
+        function handleTriggerChange(subKey, value) {
+            state.subsections[subKey].triggerValue = value;
+
+            const sub = config.subsections.find(s => s.key === subKey);
+            const entriesEl = document.getElementById(`entries_${subKey}`);
+
+            if (value === 'yes') {
+                if (entriesEl) entriesEl.classList.add('show');
+                if (sub.type === 'repeating' && state.subsections[subKey].entryCount === 0) {
+                    addEntry(subKey);
+                }
+            } else {
+                if (entriesEl) entriesEl.classList.remove('show');
+            }
+        }
+
+        function addEntry(subKey) {
+            const sub = config.subsections.find(s => s.key === subKey);
+            const entriesList = document.getElementById(`entrieslist_${subKey}`);
+            const index = state.subsections[subKey].entryCount;
+
+            const entryHtml = renderEntry(sub, index);
+            entriesList.insertAdjacentHTML('beforeend', entryHtml);
+
+            state.subsections[subKey].entryCount++;
+        }
+
+        function removeEntry(subKey, index) {
+            const entryEl = document.getElementById(`entry_${subKey}_${index}`);
+            if (entryEl) {
+                entryEl.remove();
+            }
+
+            const entriesList = document.getElementById(`entrieslist_${subKey}`);
+            if (entriesList && entriesList.children.length === 0) {
+                const triggerYes = document.querySelector(`input[name="${subKey}_trigger"][value="yes"]`);
+                const triggerNo = document.querySelector(`input[name="${subKey}_trigger"][value="no"]`);
+                if (triggerYes) triggerYes.checked = false;
+                if (triggerNo) triggerNo.checked = true;
+                handleTriggerChange(subKey, 'no');
+            }
+        }
+
+        function attachEventListeners() {
+            // No form submission in preview mode
+        }
+
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>

@@ -75,6 +75,7 @@ urlpatterns = [
     path('config/points/', views.activity_points_config, name='activity_points_config'),
     path('config/points/create/', views.activity_type_create, name='activity_type_create'),
     path('config/points/<int:pk>/edit/', views.activity_type_edit, name='activity_type_edit'),
+    path('config/points/<int:pk>/quick-edit/', views.activity_type_quick_edit, name='activity_type_quick_edit'),
 
     # === Division Management ===
     path('divisions/', views.divisions_list, name='divisions_list'),

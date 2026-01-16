@@ -1076,6 +1076,62 @@ def faculty_my_survey(request):
 
 
 # =============================================================================
+# DEMO/PREVIEW VIEWS
+# =============================================================================
+
+def survey_demo_landing(request):
+    """Demo landing page showing all survey categories (read-only preview)."""
+    # Build category list from config
+    categories = []
+    for cat_key in CATEGORY_ORDER:
+        cat_config = get_category_config(cat_key)
+        if cat_config:
+            categories.append({
+                'key': cat_key,
+                'name': cat_config['name'],
+                'complete': False,
+                'points': 0,
+            })
+
+    context = {
+        'demo_mode': True,
+        'categories': categories,
+        'first_incomplete': categories[0]['key'] if categories else 'citizenship',
+    }
+    return render(request, 'survey/demo/landing.html', context)
+
+
+def survey_demo_category(request, category):
+    """Demo category form page (read-only preview)."""
+    # Get category config
+    category_config = get_category_config(category)
+    if not category_config:
+        raise Http404("Invalid category")
+
+    # Build nav categories
+    nav_categories = []
+    for cat_key in CATEGORY_ORDER:
+        cat_config = get_category_config(cat_key)
+        if cat_config:
+            nav_categories.append({
+                'key': cat_key,
+                'name': cat_config['name'],
+                'active': cat_key == category,
+                'complete': False,
+            })
+
+    context = {
+        'demo_mode': True,
+        'category_config': category_config,
+        'category_data': {},  # Empty data for preview
+        'nav_categories': nav_categories,
+        'next_category': get_next_category(category),
+        'prev_category': get_prev_category(category),
+    }
+    return render(request, 'survey/demo/category_form.html', context)
+
+
+# =============================================================================
 # HELPER FUNCTIONS
 # =============================================================================
 
