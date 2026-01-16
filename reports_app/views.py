@@ -1137,7 +1137,7 @@ def departmental_data(request, year_code=None):
         'dept_data': dept_data,
         'academic_year': academic_year,
         'years': years,
-        'point_values': DepartmentalData.POINT_VALUES,
+        'point_values': DepartmentalData.get_point_values(),
     })
 
 
@@ -1244,7 +1244,7 @@ def db_export_points(request):
         faculty = sd.faculty
         dd = dept_data.get(faculty.email)
         dept_points = dd.departmental_total_points if dd else 0
-        ccc_points = DepartmentalData.POINT_VALUES['ccc_member'] if faculty.is_ccc_member else 0
+        ccc_points = DepartmentalData.get_point_values()['ccc_member'] if faculty.is_ccc_member else 0
         total = sd.survey_total_points + dept_points + ccc_points
         avc_eligible = 'Yes' if faculty.is_avc_eligible else 'No'
 
@@ -1283,7 +1283,7 @@ def db_select_faculty(request):
         faculty = sd.faculty
         dd = dept_data.get(faculty.email)
         dept_points = dd.departmental_total_points if dd else 0
-        ccc_points = DepartmentalData.POINT_VALUES['ccc_member'] if faculty.is_ccc_member else 0
+        ccc_points = DepartmentalData.get_point_values()['ccc_member'] if faculty.is_ccc_member else 0
 
         faculty_list.append({
             'email': faculty.email,
@@ -1361,7 +1361,7 @@ def db_export_faculty(request):
                     'departmental': {
                         'evaluations_points': dd.evaluations_points if dd else 0,
                         'teaching_awards_points': dd.teaching_awards_points if dd else 0,
-                        'ccc_points': DepartmentalData.POINT_VALUES['ccc_member'] if sd.faculty.is_ccc_member else 0,
+                        'ccc_points': DepartmentalData.get_point_values()['ccc_member'] if sd.faculty.is_ccc_member else 0,
                     } if dd else {},
                 }
 
