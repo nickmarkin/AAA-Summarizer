@@ -3171,6 +3171,7 @@ def activity_review_action(request, email):
 def export_portal_links(request):
     """Export all faculty portal links as CSV."""
     import csv
+    from django.conf import settings
 
     response = HttpResponse(content_type='text/csv')
     response['Content-Disposition'] = 'attachment; filename="faculty_portal_links.csv"'
@@ -3178,7 +3179,10 @@ def export_portal_links(request):
     writer = csv.writer(response)
     writer.writerow(['Last Name', 'First Name', 'Email', 'Division', 'Portal URL'])
 
-    site_url = request.build_absolute_uri('/')[:-1]  # Auto-detect domain
+    # Use SITE_URL from settings (includes subpath if configured)
+    site_url = getattr(settings, 'SITE_URL', None)
+    if not site_url:
+        site_url = request.build_absolute_uri('/')[:-1]
 
     for faculty in FacultyMember.objects.filter(is_active=True).order_by('last_name', 'first_name'):
         portal_url = f"{site_url}/my/{faculty.access_token}/"
