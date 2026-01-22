@@ -124,9 +124,8 @@
 
                 <h6 class="text-uppercase text-muted mt-4 mb-3">Categories</h6>
 
-                {% with is_submitted=invitation.status == 'submitted' %}
                 <div class="progress-bar-container">
-                    {% if is_submitted %}
+                    {% if invitation.status == 'submitted' %}
                     <div class="progress-fill" style="width: 100%; background: linear-gradient(90deg, #28a745 0%, #20c997 100%);"></div>
                     {% else %}
                     {% with pct=response.completion_percentage|default:0 %}
@@ -135,14 +134,14 @@
                     {% endif %}
                 </div>
                 <p class="text-center text-muted small">
-                    {% if is_submitted %}100{% else %}{{ response.completion_percentage|default:0 }}{% endif %}% Complete
+                    {% if invitation.status == 'submitted' %}100{% else %}{{ response.completion_percentage|default:0 }}{% endif %}% Complete
                 </p>
 
                 <ul class="category-list">
                     {% for cat in categories %}
-                    <li class="category-item {% if cat.complete or is_submitted %}completed{% endif %}">
+                    <li class="category-item {% if cat.complete or invitation.status == 'submitted' %}completed{% endif %}">
                         <span class="category-number">
-                            {% if cat.complete or is_submitted %}
+                            {% if cat.complete or invitation.status == 'submitted' %}
                                 <i class="bi bi-check"></i>
                             {% else %}
                                 {{ forloop.counter }}
@@ -151,7 +150,7 @@
                         <span class="category-name">{{ cat.name }}</span>
                         <a href="{% url 'survey:survey_category' token=invitation.token category=cat.key %}"
                            class="btn btn-sm btn-outline-primary">
-                            {% if cat.complete or is_submitted %}Edit{% else %}Start{% endif %}
+                            {% if cat.complete or invitation.status == 'submitted' %}Edit{% else %}Start{% endif %}
                         </a>
                     </li>
                     {% empty %}
@@ -165,7 +164,7 @@
 
                 <div class="d-grid gap-2">
                     {% if categories %}
-                    {% if is_submitted %}
+                    {% if invitation.status == 'submitted' %}
                     <a href="{% url 'survey:survey_category' token=invitation.token category=categories.0.key %}"
                        class="btn btn-primary btn-lg">
                         Edit Survey
@@ -181,14 +180,13 @@
                     </a>
                     {% endif %}
                     {% endif %}
-                    {% if response.completion_percentage == 100 or is_submitted %}
+                    {% if response.completion_percentage == 100 or invitation.status == 'submitted' %}
                     <a href="{% url 'survey:survey_review' token=invitation.token %}"
                        class="btn btn-success btn-lg">
                         Review & Submit
                     </a>
                     {% endif %}
                 </div>
-                {% endwith %}
             {% endif %}
         </div>
 
