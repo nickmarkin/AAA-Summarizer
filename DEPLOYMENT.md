@@ -93,7 +93,14 @@ Required environment variables:
 SECRET_KEY=your-random-secret-key-here
 DEBUG=False
 ALLOWED_HOSTS=your-server-hostname.unmc.edu
+SITE_URL=https://your-server-hostname.unmc.edu
 ```
+
+**Important**: If the application is deployed at a subpath (e.g., `/secure/academic-achievement`), include the full path in `SITE_URL`:
+```
+SITE_URL=https://your-server-hostname.unmc.edu/secure/academic-achievement
+```
+This ensures survey invitation links are generated correctly.
 
 Generate a secret key:
 ```bash
