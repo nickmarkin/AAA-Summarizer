@@ -1145,9 +1145,9 @@ def _send_invitation_email(invitation):
         campaign = invitation.campaign
         faculty = invitation.faculty
 
-        # Build survey URL
-        survey_url = settings.SITE_URL if hasattr(settings, 'SITE_URL') else 'http://localhost:8000'
-        survey_url += reverse('survey:survey_landing', kwargs={'token': invitation.token})
+        # Build portal URL (faculty portal is the stable entry point)
+        base_url = settings.SITE_URL if hasattr(settings, 'SITE_URL') else 'http://localhost:8000'
+        survey_url = f"{base_url}/my/{faculty.access_token}/"
 
         # Format deadline
         deadline = campaign.closes_at.strftime('%B %d, %Y at %I:%M %p')
@@ -1234,8 +1234,9 @@ def _send_reminder_email(invitation):
         campaign = invitation.campaign
         faculty = invitation.faculty
 
-        survey_url = settings.SITE_URL if hasattr(settings, 'SITE_URL') else 'http://localhost:8000'
-        survey_url += reverse('survey:survey_landing', kwargs={'token': invitation.token})
+        # Build portal URL (faculty portal is the stable entry point)
+        base_url = settings.SITE_URL if hasattr(settings, 'SITE_URL') else 'http://localhost:8000'
+        survey_url = f"{base_url}/my/{faculty.access_token}/"
 
         # Use campaign-specific from address or default
         if campaign.email_from_name and campaign.email_from_address:
@@ -1353,29 +1354,28 @@ UNMC Department of Anesthesiology"""
 
 
 def _send_magic_link_email(email, invitations):
-    """Send email with links to all active surveys."""
+    """Send email with portal link."""
     from django.core.mail import send_mail
     from django.conf import settings
-    from django.urls import reverse
 
     try:
         base_url = settings.SITE_URL if hasattr(settings, 'SITE_URL') else 'http://localhost:8000'
 
-        links = []
-        for inv in invitations:
-            url = base_url + reverse('survey:survey_landing', kwargs={'token': inv.token})
-            links.append(f"- {inv.campaign.name}: {url}")
+        # Get faculty from first invitation to get portal token
+        faculty = invitations[0].faculty
+        portal_url = f"{base_url}/my/{faculty.access_token}/"
 
-        subject = f"{settings.SURVEY_EMAIL_SUBJECT_PREFIX}Your Survey Links"
+        subject = f"{settings.SURVEY_EMAIL_SUBJECT_PREFIX}Your Survey Portal Link"
 
         message = f"""
 You requested access to your Academic Achievement Surveys.
 
-Here are your survey links:
+Access your personal portal here:
+{portal_url}
 
-{chr(10).join(links)}
+From your portal, you can view all open surveys, past submissions, and your point totals.
 
-These links are unique to you. Please do not share them.
+This link is unique to you. Please bookmark it for future use.
 
 Thank you,
 UNMC Department of Anesthesiology

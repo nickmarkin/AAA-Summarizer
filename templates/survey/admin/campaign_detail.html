@@ -225,7 +225,7 @@
                 <td>
                     <div class="btn-group btn-group-sm">
                         <button type="button" class="btn btn-outline-secondary btn-sm"
-                                onclick="copyLink('{{ inv.token }}')" title="Copy survey link">
+                                onclick="copyLink('{{ inv.faculty.access_token }}')" title="Copy portal link">
                             <i class="bi bi-link-45deg"></i>
                         </button>
                         <a href="{% url 'survey:invitation_history' pk=inv.pk %}" class="btn btn-outline-secondary btn-sm" title="View edit history">
@@ -283,8 +283,18 @@ document.querySelectorAll('[data-filter]').forEach(btn => {
     });
 });
 
-function copyLink(token) {
-    const url = `${window.location.origin}/survey/s/${token}/`;
+function copyLink(accessToken) {
+    // Build portal URL - use same base as current page (handles subpath deployments)
+    const pathParts = window.location.pathname.split('/');
+    // Find where our app is mounted by looking for known segments
+    let basePath = '';
+    for (let i = 0; i < pathParts.length; i++) {
+        if (pathParts[i] === 'survey' || pathParts[i] === 'roster' || pathParts[i] === 'config') {
+            basePath = pathParts.slice(0, i).join('/');
+            break;
+        }
+    }
+    const url = `${window.location.origin}${basePath}/my/${accessToken}/`;
     navigator.clipboard.writeText(url).then(() => {
         // Brief visual feedback
         const btn = event.target.closest('button');

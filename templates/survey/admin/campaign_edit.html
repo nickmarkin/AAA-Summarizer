@@ -177,7 +177,7 @@ function previewEmail() {
     // Replace placeholders with sample values
     body = body.replace(/{first_name}/g, 'John');
     body = body.replace(/{last_name}/g, 'Doe');
-    body = body.replace(/{survey_link}/g, 'http://localhost:8000/survey/s/SAMPLE-TOKEN/');
+    body = body.replace(/{survey_link}/g, 'https://your-site.edu/my/SAMPLE-PORTAL-TOKEN/');
     body = body.replace(/{deadline}/g, '{{ campaign.closes_at|date:"F j, Y" }} at {{ campaign.closes_at|time:"g:i A" }}');
 
     document.getElementById('previewFrom').textContent = `${fromName} <${fromEmail}>`;
