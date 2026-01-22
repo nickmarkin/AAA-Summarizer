@@ -258,12 +258,14 @@ pip install -r requirements.txt
 # Run migrations
 python manage.py migrate
 
-# Collect static files
+# Collect static files (REQUIRED - copies images, CSS, JS to web server location)
 python manage.py collectstatic --noinput
 
 # Restart service
 sudo systemctl restart academic-achievement
 ```
+
+**Important**: Always run `collectstatic` after updates. If images or styles are missing/broken, this is usually the fix.
 
 ### Log Rotation
 
