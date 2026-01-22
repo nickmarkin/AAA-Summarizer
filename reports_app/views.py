@@ -2026,6 +2026,115 @@ def activity_entries_by_role(request, category, subcategory, role):
     })
 
 
+def all_activities(request):
+    """Show all activity entries across all categories."""
+    from src.config import ACTIVITY_CATEGORIES, ACTIVITY_DISPLAY_NAMES
+
+    year_code = request.GET.get('year', '')
+    if year_code:
+        academic_year = get_object_or_404(AcademicYear, year_code=year_code)
+    else:
+        academic_year = AcademicYear.get_current()
+
+    # Get filter parameters
+    category_filter = request.GET.get('category', '')
+    source_filter = request.GET.get('source', '')  # 'survey' or 'manual'
+    search_query = request.GET.get('q', '').strip().lower()
+
+    survey_data = FacultySurveyData.objects.filter(
+        academic_year=academic_year
+    ).select_related('faculty')
+
+    # Collect all entries
+    entries = []
+    for sd in survey_data:
+        # Process imported activities
+        activities = sd.activities_json or {}
+        if source_filter != 'manual':
+            for cat_key, cat_data in activities.items():
+                if category_filter and cat_key != category_filter:
+                    continue
+                if not isinstance(cat_data, dict):
+                    continue
+                cat_name = ACTIVITY_CATEGORIES.get(cat_key, {}).get('name', cat_key)
+                for subcat, subcat_data in cat_data.items():
+                    subcat_name = ACTIVITY_DISPLAY_NAMES.get(subcat, subcat)
+                    # Handle different data formats
+                    if isinstance(subcat_data, dict) and 'entries' in subcat_data:
+                        entry_list = subcat_data.get('entries', [])
+                    elif isinstance(subcat_data, list):
+                        entry_list = subcat_data
+                    elif subcat_data:
+                        entry_list = [subcat_data]
+                    else:
+                        entry_list = []
+
+                    for entry in entry_list:
+                        # Apply search filter
+                        if search_query:
+                            entry_text = ' '.join(str(v).lower() for v in entry.values() if v)
+                            if search_query not in entry_text and search_query not in sd.faculty.display_name.lower():
+                                continue
+                        entries.append({
+                            'faculty_email': sd.faculty.email,
+                            'faculty_name': sd.faculty.display_name,
+                            'category': cat_key,
+                            'category_name': cat_name,
+                            'subcategory': subcat,
+                            'subcategory_name': subcat_name,
+                            'source': 'Survey',
+                            'data': entry,
+                        })
+
+        # Process manual activities
+        manual = sd.manual_activities_json or {}
+        if source_filter != 'survey':
+            for cat_key, cat_data in manual.items():
+                if category_filter and cat_key != category_filter:
+                    continue
+                if not isinstance(cat_data, dict):
+                    continue
+                cat_name = ACTIVITY_CATEGORIES.get(cat_key, {}).get('name', cat_key)
+                for subcat, subcat_data in cat_data.items():
+                    subcat_name = ACTIVITY_DISPLAY_NAMES.get(subcat, subcat)
+                    entry_list = subcat_data if isinstance(subcat_data, list) else [subcat_data] if subcat_data else []
+
+                    for entry in entry_list:
+                        # Apply search filter
+                        if search_query:
+                            entry_text = ' '.join(str(v).lower() for v in entry.values() if v)
+                            if search_query not in entry_text and search_query not in sd.faculty.display_name.lower():
+                                continue
+                        entries.append({
+                            'faculty_email': sd.faculty.email,
+                            'faculty_name': sd.faculty.display_name,
+                            'category': cat_key,
+                            'category_name': cat_name,
+                            'subcategory': subcat,
+                            'subcategory_name': subcat_name,
+                            'source': 'Manual',
+                            'data': entry,
+                        })
+
+    # Sort by faculty name, then category
+    entries.sort(key=lambda x: (x['faculty_name'], x['category_name'], x['subcategory_name']))
+
+    # Build category choices for filter dropdown
+    category_choices = [(k, v['name']) for k, v in ACTIVITY_CATEGORIES.items()]
+
+    years = AcademicYear.objects.all()
+
+    return render(request, 'activities/all_entries.html', {
+        'entries': entries,
+        'academic_year': academic_year,
+        'years': years,
+        'category_filter': category_filter,
+        'source_filter': source_filter,
+        'search_query': request.GET.get('q', ''),
+        'category_choices': category_choices,
+    })
+
+
 def faculty_activities(request, email):
     """Show all activities for a single faculty member."""
     from src.config import ACTIVITY_CATEGORIES, ACTIVITY_DISPLAY_NAMES

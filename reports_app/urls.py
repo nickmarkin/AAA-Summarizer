@@ -59,6 +59,7 @@ urlpatterns = [
 
     # === Activity Browse & Edit ===
     path('activities/', views.activity_category_list, name='activity_categories'),
+    path('activities/all/', views.all_activities, name='all_activities'),
     # Specific paths must come before generic <str:category> patterns
     path('activities/faculty/<str:email>/', views.faculty_activities, name='faculty_activities'),
     path('activities/add/<str:email>/', views.add_activity, name='add_activity'),

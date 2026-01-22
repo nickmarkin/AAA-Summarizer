@@ -7,7 +7,7 @@
 {% block content %}
 <h1>Browse Activities</h1>
 
-<div class="actions" style="margin-bottom: 15px;">
+<div class="actions" style="margin-bottom: 15px; display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
     <form method="get" style="display: inline;">
         <label>Academic Year:</label>
         <select name="year" onchange="this.form.submit()">
@@ -18,6 +18,9 @@
             {% endfor %}
         </select>
     </form>
+    <a href="{% url 'all_activities' %}?year={{ academic_year.year_code }}" class="btn btn-app">
+        View All Entries
+    </a>
 </div>
 
 <table>
