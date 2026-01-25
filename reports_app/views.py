@@ -1509,19 +1509,18 @@ def db_export_points(request):
     }
 
     # Build CSV
-    lines = ['Name,Email,AVC Eligible,Survey Points,Departmental Points,CCC Points,Total Points']
+    lines = ['Name,Email,AVC Eligible,Survey Points,Departmental Points,Total Points']
 
     for sd in survey_queryset.order_by('faculty__last_name', 'faculty__first_name'):
         faculty = sd.faculty
         dd = dept_data.get(faculty.email)
-        dept_points = dd.departmental_total_points if dd else 0
-        ccc_points = DepartmentalData.get_point_values()['ccc_member'] if faculty.is_ccc_member else 0
-        total = sd.survey_total_points + dept_points + ccc_points
+        dept_points = dd.departmental_total_points if dd else 0  # Already includes CCC points
+        total = sd.survey_total_points + dept_points
         avc_eligible = 'Yes' if faculty.is_avc_eligible else 'No'
 
         lines.append(
             f'"{faculty.display_name}",{faculty.email},{avc_eligible},'
-            f'{sd.survey_total_points},{dept_points},{ccc_points},{total}'
+            f'{sd.survey_total_points},{dept_points},{total}'
         )
 
     csv_content = '\n'.join(lines)
@@ -1553,16 +1552,14 @@ def db_select_faculty(request):
     for sd in survey_data:
         faculty = sd.faculty
         dd = dept_data.get(faculty.email)
-        dept_points = dd.departmental_total_points if dd else 0
-        ccc_points = DepartmentalData.get_point_values()['ccc_member'] if faculty.is_ccc_member else 0
+        dept_points = dd.departmental_total_points if dd else 0  # Already includes CCC points
 
         faculty_list.append({
             'email': faculty.email,
             'display_name': faculty.display_name,
             'survey_points': sd.survey_total_points,
             'dept_points': dept_points,
-            'ccc_points': ccc_points,
-            'total_points': sd.survey_total_points + dept_points + ccc_points,
+            'total_points': sd.survey_total_points + dept_points,
             'has_incomplete': sd.has_incomplete,
             'quarters': sd.quarters_reported,
         })
