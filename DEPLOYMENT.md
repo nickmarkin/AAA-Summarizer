@@ -6,8 +6,9 @@ This document provides step-by-step instructions for deploying the Academic Achi
 
 - **Framework**: Django 6.0
 - **Language**: Python 3.11+
-- **Database**: SQLite (sessions only, no persistent data)
+- **Database**: SQLite (persistent data for faculty, surveys, campaigns)
 - **PDF Generation**: WeasyPrint (requires system libraries)
+- **Email**: SMTP for sending survey invitations/reminders
 
 ## Prerequisites
 
@@ -16,7 +17,7 @@ This document provides step-by-step instructions for deploying the Academic Achi
 - Linux server (Ubuntu 22.04 LTS recommended) or macOS
 - Python 3.11 or higher
 - 1GB RAM minimum
-- 500MB disk space
+- 1GB disk space (for database and static files)
 
 ### System Dependencies (Ubuntu/Debian)
 
@@ -89,11 +90,24 @@ nano .env
 ```
 
 Required environment variables:
-```
+```bash
+# Security
 SECRET_KEY=your-random-secret-key-here
 DEBUG=False
 ALLOWED_HOSTS=your-server-hostname.unmc.edu
+
+# URL Configuration
 SITE_URL=https://your-server-hostname.unmc.edu
+
+# Email Configuration (for survey invitations)
+EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend
+EMAIL_HOST=smtp.unmc.edu
+EMAIL_PORT=587
+EMAIL_USE_TLS=True
+EMAIL_HOST_USER=service-account@unmc.edu
+EMAIL_HOST_PASSWORD=your-smtp-password
+DEFAULT_FROM_EMAIL=noreply@unmc.edu
+SURVEY_EMAIL_SUBJECT_PREFIX=[UNMC Anesthesiology]
 ```
 
 **Important**: If the application is deployed at a subpath (e.g., `/secure/academic-achievement`), include the full path in `SITE_URL`:
@@ -122,7 +136,7 @@ python manage.py collectstatic --noinput
 python manage.py runserver 0.0.0.0:8000
 
 # Access at http://server-ip:8000
-# Upload test CSV and verify exports work
+# Test: Create a campaign, add faculty, send test email
 ```
 
 #### Step 6: Configure Production Server (Gunicorn + Nginx)
@@ -186,27 +200,63 @@ sudo nginx -t
 sudo systemctl restart nginx
 ```
 
+## Email Configuration
+
+The application sends emails for:
+- Survey invitations (initial)
+- Survey reminders (follow-up)
+
+### SMTP Setup
+
+Contact your IT department for SMTP credentials. Common configurations:
+
+**Microsoft 365:**
+```bash
+EMAIL_HOST=smtp.office365.com
+EMAIL_PORT=587
+EMAIL_USE_TLS=True
+```
+
+**On-premises Exchange:**
+```bash
+EMAIL_HOST=mail.unmc.edu
+EMAIL_PORT=25
+EMAIL_USE_TLS=False
+```
+
+### Testing Email
+
+```bash
+python manage.py shell
+>>> from django.core.mail import send_mail
+>>> send_mail('Test', 'Test body', 'from@unmc.edu', ['your@email.com'])
+```
+
 ## Security Considerations
 
 1. **HTTPS**: Use Let's Encrypt or institutional certificates
 2. **Firewall**: Only expose ports 80/443
-3. **No persistent data**: CSV uploads are processed in memory, not stored
-4. **Session cleanup**: Sessions expire automatically
+3. **Database**: SQLite file should not be web-accessible
+4. **Tokens**: Faculty portal tokens are randomly generated (URL-safe)
+5. **Session cleanup**: Sessions expire automatically
 
 ## Verification Checklist
 
 After deployment, verify:
 
 - [ ] Home page loads at configured URL
-- [ ] Can upload test CSV file
-- [ ] Faculty list displays correctly
-- [ ] Points CSV export downloads
-- [ ] Faculty summary PDF generates
-- [ ] Activity report PDF generates
+- [ ] Can create a survey campaign
+- [ ] Can add faculty to campaign
+- [ ] Can send test invitation email
+- [ ] Faculty can access portal via email link
+- [ ] Faculty can complete and submit survey
+- [ ] Admin can view submissions
+- [ ] Points CSV export downloads correctly
+- [ ] Division dashboards load for chiefs
 
 ## Test Data
 
-A sample CSV file is included in `test_data/sample_export.csv` for testing the deployment.
+A sample CSV file is included in `test_data/sample_export.csv` for testing REDCap import functionality.
 
 ## Troubleshooting
 
@@ -241,6 +291,20 @@ Check logs:
 sudo journalctl -u academic-achievement -f
 ```
 
+### Emails Not Sending
+
+1. Check EMAIL_BACKEND is set to smtp (not filebased)
+2. Verify SMTP credentials with IT
+3. Check email logs: `EmailLog.objects.all()` in Django shell
+4. Test with Django shell (see Testing Email above)
+
+### Survey Links Not Working
+
+Verify SITE_URL is set correctly in `.env`:
+- Include protocol (https://)
+- Include any subpath if deployed at a subpath
+- No trailing slash
+
 ## Maintenance
 
 ### Updating the Application
@@ -267,6 +331,17 @@ sudo systemctl restart academic-achievement
 
 **Important**: Always run `collectstatic` after updates. If images or styles are missing/broken, this is usually the fix.
 
+### Database Backup
+
+```bash
+# Backup
+cp /opt/academic-achievement/db.sqlite3 /backup/db.sqlite3.$(date +%Y%m%d)
+
+# Restore
+cp /backup/db.sqlite3.YYYYMMDD /opt/academic-achievement/db.sqlite3
+sudo systemctl restart academic-achievement
+```
+
 ### Log Rotation
 
 Logs are written to systemd journal. Configure retention in `/etc/systemd/journald.conf`.
@@ -280,13 +355,14 @@ For server/infrastructure issues, contact UNMC IT.
 
 ```
 /opt/academic-achievement/
-├── src/                    # Core Python library
-├── reports_app/            # Django app
+├── reports_app/            # Reports, roster, import
+├── survey_app/             # Survey campaigns and responses
 ├── webapp/                 # Django project settings
 ├── templates/              # HTML templates
 ├── static/                 # Static files (CSS, JS)
 ├── staticfiles/            # Collected static files (production)
 ├── venv/                   # Python virtual environment
+├── db.sqlite3              # SQLite database
 ├── requirements.txt        # Python dependencies
 ├── manage.py               # Django management script
 ├── .env                    # Environment variables (create from .env.example)
