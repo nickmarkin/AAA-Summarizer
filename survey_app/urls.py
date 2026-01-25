@@ -17,10 +17,14 @@ urlpatterns = [
     path('admin/campaigns/<int:pk>/', views.campaign_detail, name='campaign_detail'),
     path('admin/campaigns/<int:pk>/edit/', views.campaign_edit, name='campaign_edit'),
     path('admin/campaigns/<int:pk>/faculty/', views.campaign_update_faculty, name='campaign_update_faculty'),
+    path('admin/campaigns/<int:pk>/sync/', views.campaign_sync_from_import, name='campaign_sync_from_import'),
+    path('admin/campaigns/<int:pk>/email/', views.campaign_send_email, name='campaign_send_email'),
     path('admin/campaigns/<int:pk>/send/', views.campaign_send_invitations, name='campaign_send'),
     path('admin/campaigns/<int:pk>/remind/', views.campaign_send_reminders, name='campaign_remind'),
     path('admin/invitations/<int:pk>/unlock/', views.invitation_unlock, name='invitation_unlock'),
     path('admin/campaigns/<int:pk>/export/', views.campaign_export_csv, name='campaign_export'),
+    path('admin/campaigns/<int:pk>/export/mailmerge-csv/', views.campaign_export_mailmerge_csv, name='campaign_export_mailmerge_csv'),
+    path('admin/campaigns/<int:pk>/export/mailmerge-word/', views.campaign_export_mailmerge_word, name='campaign_export_mailmerge_word'),
     path('admin/invitations/<int:pk>/history/', views.invitation_history, name='invitation_history'),
 
     # ==========================================================================

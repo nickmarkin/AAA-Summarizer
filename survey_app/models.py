@@ -80,6 +80,19 @@ class SurveyCampaign(models.Model):
         help_text='Email body. Use {first_name}, {last_name}, {survey_link}, {deadline} as placeholders.'
     )
 
+    # Reminder email customization
+    reminder_subject = models.CharField(
+        max_length=200,
+        blank=True,
+        default='',
+        help_text='Reminder email subject (leave blank for default)'
+    )
+    reminder_body = models.TextField(
+        blank=True,
+        default='',
+        help_text='Reminder email body. Use {first_name}, {last_name}, {survey_link}, {deadline}, {status} as placeholders.'
+    )
+
     # Audit fields
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

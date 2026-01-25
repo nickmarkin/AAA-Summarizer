@@ -155,7 +155,7 @@ CITIZENSHIP_CONFIG = {
                         ('unmc', 'UNMC standing committee (admissions, GME, curriculum, senate, IRB)', POINT_VALUES['comm_unmc']),
                         ('nebmed', 'Nebraska Medicine standing committee (MEC/med staff)', POINT_VALUES['comm_nebmed']),
                         ('minor', 'Minor or ad hoc committee', POINT_VALUES['comm_minor']),
-                        ('other', 'Other committee (no points)', POINT_VALUES['comm_other']),
+                        ('other', 'Other committee', POINT_VALUES['comm_other']),
                     ],
                 },
                 {
@@ -177,7 +177,7 @@ CITIZENSHIP_CONFIG = {
             'name': 'Department Citizenship',
             'trigger': {
                 'field': 'trig_cit_dept',
-                'label': 'Did you participate in department citizenship activities this quarter (Grand Rounds, Journal Club, or student shadowing)?',
+                'label': 'Did you participate in department citizenship activities this quarter (Grand Rounds attendance, QA attendance Journal Club attendance, or student shadowing)?',
                 'type': 'yesno',
                 'help_text': 'Select Yes to enter details below',
             },
@@ -192,6 +192,7 @@ CITIZENSHIP_CONFIG = {
                     'choices': [
                         ('gr_host', 'Grand Rounds Host', POINT_VALUES['dept_gr_host']),
                         ('gr_attend', 'Grand Rounds Attendance (in person)', POINT_VALUES['dept_gr_attend']),
+                        ('qa_attend', 'QA Meeting Attendance (in person)', POINT_VALUES['dept_gr_attend']),
                         ('jc_host', 'Journal Club Host', POINT_VALUES['dept_jc_host']),
                         ('jc_attend', 'Journal Club Attendance (in person; Dept or Division Level)', POINT_VALUES['dept_jc_attend']),
                         ('shadow', 'Student Shadowing Mentor', POINT_VALUES['dept_shadow']),

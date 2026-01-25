@@ -32,6 +32,21 @@
         </div>
 
         <div class="form-group">
+            <label>Survey Campaign (for editable survey responses)</label>
+            <select name="campaign_id">
+                <option value="">-- No campaign (import to reports only) --</option>
+                {% for campaign in campaigns %}
+                <option value="{{ campaign.pk }}">
+                    {{ campaign.name }} ({{ campaign.get_quarter_display }})
+                </option>
+                {% endfor %}
+            </select>
+            <small style="color: #666; display: block; margin-top: 4px;">
+                Select a campaign to create editable survey responses. Faculty can then edit their imported data via the survey link.
+            </small>
+        </div>
+
+        <div class="form-group">
             <label>CSV File</label>
             <input type="file" name="csv_file" accept=".csv" required>
         </div>

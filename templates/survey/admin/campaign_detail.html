@@ -76,26 +76,12 @@
         <div class="card">
             <h6>Actions</h6>
             <div class="d-grid gap-2">
-                <form method="post" action="{% url 'survey:campaign_send' pk=campaign.pk %}">
-                    {% csrf_token %}
-                    <button type="submit" class="btn btn-primary w-100"
-                            {% if not campaign.is_active or stats.not_emailed == 0 %}disabled{% endif %}>
-                        <i class="bi bi-envelope"></i> Send Invitations
-                        {% if stats.not_emailed > 0 %}
-                            <span class="badge bg-light text-primary ms-1">{{ stats.not_emailed }}</span>
-                        {% endif %}
-                    </button>
-                </form>
-                <form method="post" action="{% url 'survey:campaign_remind' pk=campaign.pk %}">
-                    {% csrf_token %}
-                    <button type="submit" class="btn btn-warning w-100"
-                            {% if not campaign.is_active or stats.not_submitted == 0 %}disabled{% endif %}>
-                        <i class="bi bi-bell"></i> Send Reminders
-                        {% if stats.not_submitted > 0 %}
-                            <span class="badge bg-light text-warning ms-1">{{ stats.not_submitted }}</span>
-                        {% endif %}
-                    </button>
-                </form>
+                <a href="{% url 'survey:campaign_send_email' pk=campaign.pk %}" class="btn btn-primary">
+                    <i class="bi bi-envelope"></i> Send Email
+                    {% if stats.not_emailed > 0 or stats.not_submitted > 0 %}
+                        <span class="badge bg-light text-primary ms-1">{{ stats.not_emailed|add:stats.not_submitted }}</span>
+                    {% endif %}
+                </a>
                 <a href="{% url 'survey:campaign_edit' pk=campaign.pk %}" class="btn btn-outline-secondary">
                     <i class="bi bi-pencil"></i> Edit Campaign
                 </a>
@@ -106,6 +92,13 @@
                 <a href="{% url 'survey:survey_demo' %}" class="btn btn-outline-info w-100" target="_blank">
                     <i class="bi bi-eye"></i> Preview Survey
                 </a>
+                <form method="post" action="{% url 'survey:campaign_sync_from_import' pk=campaign.pk %}" class="mt-2"
+                      onsubmit="return confirm('Sync imported data to survey responses for faculty who are missing responses?')">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-outline-secondary w-100">
+                        <i class="bi bi-arrow-repeat"></i> Sync from Import
+                    </button>
+                </form>
             </div>
 
             <hr>
@@ -224,6 +217,9 @@
                 </td>
                 <td>
                     <div class="btn-group btn-group-sm">
+                        <a href="/my/{{ inv.faculty.access_token }}/" target="_blank" class="btn btn-outline-primary btn-sm" title="Open portal">
+                            <i class="bi bi-box-arrow-up-right"></i>
+                        </a>
                         <button type="button" class="btn btn-outline-secondary btn-sm"
                                 onclick="copyLink('{{ inv.faculty.access_token }}')" title="Copy portal link">
                             <i class="bi bi-link-45deg"></i>
@@ -231,15 +227,6 @@
                         <a href="{% url 'survey:invitation_history' pk=inv.pk %}" class="btn btn-outline-secondary btn-sm" title="View edit history">
                             <i class="bi bi-clock-history"></i>
                         </a>
-                        {% if inv.status == 'submitted' %}
-                        <form method="post" action="{% url 'survey:invitation_unlock' pk=inv.pk %}"
-                              style="display: inline;" onsubmit="return confirm('Unlock survey for {{ inv.faculty.display_name }}? They will be able to edit and resubmit.')">
-                            {% csrf_token %}
-                            <button type="submit" class="btn btn-outline-warning btn-sm" title="Unlock for editing">
-                                <i class="bi bi-unlock"></i>
-                            </button>
-                        </form>
-                        {% endif %}
                     </div>
                 </td>
             </tr>

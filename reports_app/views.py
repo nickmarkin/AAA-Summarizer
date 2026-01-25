@@ -910,6 +910,8 @@ def toggle_ccc(request, email):
 
 def import_survey(request):
     """Upload survey CSV for import to database."""
+    from survey_app.models import SurveyCampaign
+
     if request.method == 'POST':
         if 'csv_file' not in request.FILES:
             messages.error(request, 'Please select a CSV file.')
@@ -917,6 +919,7 @@ def import_survey(request):
 
         csv_file = request.FILES['csv_file']
         year_code = request.POST.get('year_code', '')
+        campaign_id = request.POST.get('campaign_id', '')
 
         if not csv_file.name.endswith('.csv'):
             messages.error(request, 'Please upload a CSV file.')
@@ -951,6 +954,7 @@ def import_survey(request):
             request.session['import_summary'] = data['summary']
             request.session['import_year_code'] = academic_year.year_code
             request.session['import_filename'] = csv_file.name
+            request.session['import_campaign_id'] = campaign_id if campaign_id else None
 
             return redirect('import_review')
 
@@ -965,39 +969,114 @@ def import_survey(request):
     years = AcademicYear.objects.all()
     current_year = AcademicYear.get_current()
 
+    # Get campaigns for the current year
+    campaigns = SurveyCampaign.objects.filter(
+        academic_year=current_year
+    ).order_by('quarter') if current_year else []
+
     return render(request, 'import/upload.html', {
         'years': years,
         'current_year': current_year,
+        'campaigns': campaigns,
     })
 
 
 def import_review(request):
     """Review parsed data and roster matching."""
+    from survey_app.models import SurveyCampaign
+
     if 'import_faculty_data' not in request.session:
         messages.warning(request, 'No import data. Please upload a CSV file.')
         return redirect('import_survey')
 
     faculty_data = request.session['import_faculty_data']
     year_code = request.session['import_year_code']
+    campaign_id = request.session.get('import_campaign_id')
 
-    # Get roster emails
-    roster_emails = set(
-        FacultyMember.objects.filter(is_active=True)
-        .values_list('email', flat=True)
-    )
+    # Get campaign if selected
+    campaign = None
+    if campaign_id:
+        try:
+            campaign = SurveyCampaign.objects.get(pk=campaign_id)
+        except SurveyCampaign.DoesNotExist:
+            pass
+
+    # Get roster lookup (email -> FacultyMember)
+    roster_lookup = {
+        fm.email.lower(): fm
+        for fm in FacultyMember.objects.filter(is_active=True)
+    }
+
+    # Get existing survey data for this academic year
+    try:
+        academic_year = AcademicYear.objects.get(year_code=year_code)
+        existing_data = {
+            sd.faculty.email.lower(): sd
+            for sd in FacultySurveyData.objects.filter(academic_year=academic_year)
+            .select_related('faculty')
+        }
+    except AcademicYear.DoesNotExist:
+        existing_data = {}
 
     matched = []
     unmatched = []
 
+    # Comparison stats
+    new_count = 0
+    updated_count = 0
+    unchanged_count = 0
+    reduction_count = 0
+
     for email, data in faculty_data.items():
+        new_points = data.get('totals', {}).get('total', 0)
+        new_activities_count = sum(
+            len(acts) for acts in data.get('activities', {}).values()
+        )
+
         entry = {
             'email': email,
             'display_name': data.get('display_name', ''),
-            'total_points': data.get('totals', {}).get('total', 0),
+            'total_points': new_points,
             'quarters': data.get('quarters_reported', []),
             'has_incomplete': data.get('has_incomplete', False),
+            'activities_count': new_activities_count,
+            'has_point_reduction': False,
         }
-        if email.lower() in [e.lower() for e in roster_emails]:
+
+        if email.lower() in roster_lookup:
+            # Check for existing data
+            existing = existing_data.get(email.lower())
+            if existing:
+                old_points = existing.survey_total_points or 0
+                old_activities_count = sum(
+                    len(acts) for acts in (existing.activities_json or {}).values()
+                )
+                points_diff = new_points - old_points
+                activities_diff = new_activities_count - old_activities_count
+
+                # Determine if data changed
+                if points_diff == 0 and activities_diff == 0:
+                    entry['import_status'] = 'unchanged'
+                    entry['status_label'] = 'No Change'
+                    unchanged_count += 1
+                else:
+                    entry['import_status'] = 'updated'
+                    entry['status_label'] = 'Update'
+                    entry['old_points'] = old_points
+                    entry['points_diff'] = points_diff
+                    entry['old_activities_count'] = old_activities_count
+                    entry['activities_diff'] = activities_diff
+                    updated_count += 1
+
+                    # Flag point reductions
+                    if points_diff < 0:
+                        entry['has_point_reduction'] = True
+                        reduction_count += 1
+            else:
+                entry['import_status'] = 'new'
+                entry['status_label'] = 'New'
+                new_count += 1
+
             matched.append(entry)
         else:
             unmatched.append(entry)
@@ -1012,12 +1091,121 @@ def import_review(request):
         'year_code': year_code,
         'filename': request.session.get('import_filename', ''),
         'total_count': len(faculty_data),
+        'new_count': new_count,
+        'updated_count': updated_count,
+        'unchanged_count': unchanged_count,
+        'reduction_count': reduction_count,
+        'campaign': campaign,
     })
+
+
+def _convert_activities_to_survey_format(activities):
+    """
+    Convert REDCap activities format to survey form format.
+
+    REDCap format: {category: {subcat: [entries]}}
+    Survey format: {category: {subcat: {trigger: "yes", entries: [...]}}}
+
+    Args:
+        activities: Dict in REDCap format
+
+    Returns:
+        Dict in survey form format
+    """
+    if not activities or not isinstance(activities, dict):
+        return {}
+
+    # Subsection key mapping: REDCap key -> survey form key
+    subsection_key_map = {
+        'department_activities': 'dept_activities',
+    }
+
+    # Activity type value mapping: REDCap internal_type -> survey form type value
+    type_value_map = {
+        # Department activities
+        'grand_rounds_host': 'gr_host',
+        'grand_rounds_attend': 'gr_attend',
+        'qa_attend': 'qa_attend',
+        'journal_club_host': 'jc_host',
+        'journal_club_attend': 'jc_attend',
+        'student_shadow': 'shadow',
+    }
+
+    # Field name mapping: imported field name -> survey form field name
+    # This varies by subsection, so we handle it in the mapping function
+    field_name_map = {
+        'rotations': 'rotation_name',  # rotation_director
+    }
+
+    def map_field_names(entry, subsection_key=None):
+        """Map imported field names to survey form field names."""
+        if not isinstance(entry, dict):
+            return entry
+        mapped = {}
+        for key, value in entry.items():
+            new_key = field_name_map.get(key, key)
+            mapped[new_key] = value
+            # Also keep original if mapped (for display purposes)
+            if new_key != key:
+                mapped[key] = value
+
+        # Map type value using internal_type
+        if 'internal_type' in entry and entry['internal_type']:
+            internal_type = entry['internal_type']
+            mapped['type'] = type_value_map.get(internal_type, internal_type)
+
+        # For dept_activities: map 'name' to 'description'
+        if subsection_key in ('dept_activities', 'department_activities'):
+            if 'name' in entry and 'description' not in mapped:
+                mapped['description'] = entry['name']
+
+        # For committees: map 'name' to 'committee_name'
+        if subsection_key == 'committees':
+            if 'name' in entry and 'committee_name' not in mapped:
+                mapped['committee_name'] = entry['name']
+
+        return mapped
+
+    result = {}
+    for cat_key, cat_data in activities.items():
+        if not isinstance(cat_data, dict):
+            continue
+        result[cat_key] = {}
+
+        for sub_key, sub_data in cat_data.items():
+            # Map subsection key if needed
+            mapped_sub_key = subsection_key_map.get(sub_key, sub_key)
+
+            # Handle list format (REDCap import)
+            if isinstance(sub_data, list) and sub_data:
+                entries = [map_field_names(e, sub_key) for e in sub_data]
+                result[cat_key][mapped_sub_key] = {
+                    'trigger': 'yes',
+                    'entries': entries
+                }
+            # Handle dict format with entries (already in survey format)
+            elif isinstance(sub_data, dict) and sub_data.get('entries'):
+                entries = [map_field_names(e, sub_key) for e in sub_data['entries']]
+                result[cat_key][mapped_sub_key] = {
+                    'trigger': sub_data.get('trigger', 'yes'),
+                    'entries': entries
+                }
+            # Handle single dict entry
+            elif isinstance(sub_data, dict) and sub_data and 'trigger' not in sub_data:
+                result[cat_key][mapped_sub_key] = {
+                    'trigger': 'yes',
+                    'entries': [map_field_names(sub_data, sub_key)]
+                }
+
+    return result
 
 
 @require_POST
 def import_confirm(request):
     """Confirm and save import to database."""
+    from survey_app.models import SurveyCampaign, SurveyInvitation, SurveyResponse
+    from django.utils import timezone
+
     if 'import_faculty_data' not in request.session:
         messages.warning(request, 'No import data.')
         return redirect('import_survey')
@@ -1025,12 +1213,24 @@ def import_confirm(request):
     faculty_data = request.session['import_faculty_data']
     year_code = request.session['import_year_code']
     filename = request.session.get('import_filename', 'unknown.csv')
+    campaign_id = request.session.get('import_campaign_id')
+
+    # Get emails to skip from form
+    skip_emails = set(e.lower() for e in request.POST.getlist('skip_emails'))
 
     try:
         academic_year = AcademicYear.objects.get(year_code=year_code)
     except AcademicYear.DoesNotExist:
         messages.error(request, 'Academic year not found.')
         return redirect('import_survey')
+
+    # Get campaign if selected
+    campaign = None
+    if campaign_id:
+        try:
+            campaign = SurveyCampaign.objects.get(pk=campaign_id)
+        except SurveyCampaign.DoesNotExist:
+            pass
 
     # Get roster emails (case-insensitive lookup)
     roster_lookup = {
@@ -1039,6 +1239,8 @@ def import_confirm(request):
     }
 
     matched_count = 0
+    skipped_count = 0
+    survey_response_count = 0
     unmatched_emails = []
 
     with transaction.atomic():
@@ -1054,6 +1256,11 @@ def import_confirm(request):
         )
 
         for email, data in faculty_data.items():
+            # Check if this email should be skipped
+            if email.lower() in skip_emails:
+                skipped_count += 1
+                continue
+
             faculty = roster_lookup.get(email.lower())
 
             if faculty:
@@ -1093,6 +1300,46 @@ def import_confirm(request):
                     faculty=faculty,
                     academic_year=academic_year,
                 )
+
+                # If campaign selected, create SurveyInvitation + SurveyResponse
+                if campaign:
+                    invitation, inv_created = SurveyInvitation.objects.get_or_create(
+                        campaign=campaign,
+                        faculty=faculty,
+                    )
+
+                    # Convert activities to survey form format
+                    response_data = _convert_activities_to_survey_format(
+                        data.get('activities', {})
+                    )
+
+                    # Calculate category points
+                    totals = data.get('totals', {})
+
+                    # Create or update SurveyResponse
+                    response, resp_created = SurveyResponse.objects.update_or_create(
+                        invitation=invitation,
+                        defaults={
+                            'response_data': response_data,
+                            'citizenship_complete': True,
+                            'education_complete': True,
+                            'research_complete': True,
+                            'leadership_complete': True,
+                            'content_expert_complete': True,
+                            'citizenship_points': totals.get('citizenship', 0),
+                            'education_points': totals.get('education', 0),
+                            'research_points': totals.get('research', 0),
+                            'leadership_points': totals.get('leadership', 0),
+                            'content_expert_points': totals.get('content_expert', 0),
+                        }
+                    )
+
+                    # Mark invitation as submitted
+                    invitation.status = 'submitted'
+                    invitation.submitted_at = timezone.now()
+                    invitation.save(update_fields=['status', 'submitted_at'])
+
+                    survey_response_count += 1
             else:
                 unmatched_emails.append(email)
 
@@ -1102,16 +1349,22 @@ def import_confirm(request):
 
     # Clear session data
     for key in ['import_faculty_data', 'import_activity_index', 'import_summary',
-                'import_year_code', 'import_filename']:
+                'import_year_code', 'import_filename', 'import_campaign_id']:
         request.session.pop(key, None)
 
+    # Build success message
+    msg_parts = [f'Imported {matched_count} faculty']
+    if skipped_count:
+        msg_parts.append(f'{skipped_count} skipped')
+    if survey_response_count:
+        msg_parts.append(f'{survey_response_count} survey responses created')
     if unmatched_emails:
-        messages.warning(
-            request,
-            f"Imported {matched_count} faculty. {len(unmatched_emails)} not in roster."
-        )
+        msg_parts.append(f'{len(unmatched_emails)} not in roster')
+
+    if unmatched_emails or skipped_count:
+        messages.warning(request, '. '.join(msg_parts) + '.')
     else:
-        messages.success(request, f'Successfully imported {matched_count} faculty.')
+        messages.success(request, '. '.join(msg_parts) + '.')
 
     return redirect('faculty_summary')
 
@@ -2976,7 +3229,12 @@ def division_dashboard(request, code):
     from survey_app.models import SurveyInvitation
 
     division = get_object_or_404(Division, code=code)
-    academic_year = get_academic_year()
+    year_code = get_academic_year()
+    academic_year = AcademicYear.objects.filter(year_code=year_code).first()
+
+    # Create academic year if it doesn't exist
+    if not academic_year:
+        academic_year = AcademicYear.objects.create(year_code=year_code)
 
     # Get verification status for this division/year
     verification = DivisionVerification.objects.filter(
@@ -3105,7 +3363,10 @@ def division_verify(request, code):
         return redirect('division_dashboard', code=code)
 
     division = get_object_or_404(Division, code=code)
-    academic_year = get_academic_year()
+    year_code = get_academic_year()
+    academic_year = AcademicYear.objects.filter(year_code=year_code).first()
+    if not academic_year:
+        academic_year = AcademicYear.objects.create(year_code=year_code)
     action = request.POST.get('action')
 
     if action == 'verify':

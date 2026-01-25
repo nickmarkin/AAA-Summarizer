@@ -28,7 +28,49 @@
     </div>
 </div>
 
-<p><strong>File:</strong> {{ filename }} | <strong>Academic Year:</strong> AY {{ year_code }}</p>
+<p>
+    <strong>File:</strong> {{ filename }} |
+    <strong>Academic Year:</strong> AY {{ year_code }}
+    {% if campaign %}
+    | <strong>Campaign:</strong> {{ campaign.name }}
+    {% endif %}
+</p>
+
+{% if campaign %}
+<div class="card" style="margin-bottom: 1.5rem; background: #e7f3ff; border-color: #007bff;">
+    <p style="margin: 0;">
+        <strong>Survey Responses:</strong> This import will create editable survey responses for the
+        <strong>{{ campaign.name }}</strong> campaign. Faculty can edit their imported data via their survey link.
+    </p>
+</div>
+{% endif %}
+
+{% if matched %}
+<div class="card" style="margin-bottom: 1.5rem; background: #f8f9fa;">
+    <h3>Import Summary</h3>
+    <p style="margin-bottom: 0.5rem;">This import will make the following changes:</p>
+    <div style="display: flex; gap: 2rem; flex-wrap: wrap;">
+        <div>
+            <span style="display: inline-block; width: 12px; height: 12px; background: #28a745; border-radius: 2px; margin-right: 6px;"></span>
+            <strong>{{ new_count }}</strong> new faculty record{{ new_count|pluralize }}
+        </div>
+        <div>
+            <span style="display: inline-block; width: 12px; height: 12px; background: #007bff; border-radius: 2px; margin-right: 6px;"></span>
+            <strong>{{ updated_count }}</strong> record{{ updated_count|pluralize }} to update
+        </div>
+        <div>
+            <span style="display: inline-block; width: 12px; height: 12px; background: #6c757d; border-radius: 2px; margin-right: 6px;"></span>
+            <strong>{{ unchanged_count }}</strong> unchanged record{{ unchanged_count|pluralize }}
+        </div>
+    </div>
+    {% if reduction_count > 0 %}
+    <p style="margin-top: 1rem; margin-bottom: 0; color: #dc3545;">
+        <strong>Warning:</strong> {{ reduction_count }} record{{ reduction_count|pluralize }} would have point reductions.
+        Use the checkboxes below to skip these if desired.
+    </p>
+    {% endif %}
+</div>
+{% endif %}
 
 {% if unmatched %}
 <div class="card" style="border-color: #ffc107;">
@@ -51,42 +93,107 @@
 </div>
 {% endif %}
 
-<div class="card">
-    <h3>Matched Faculty ({{ matched|length }})</h3>
-    <p>These faculty will be imported.</p>
-    <table>
-        <thead>
-            <tr><th>Name</th><th>Email</th><th>Points</th><th>Quarters</th><th>Status</th></tr>
-        </thead>
-        <tbody>
-            {% for f in matched %}
-            <tr>
-                <td>{{ f.display_name }}</td>
-                <td>{{ f.email }}</td>
-                <td>{{ f.total_points }}</td>
-                <td>{{ f.quarters|join:", " }}</td>
-                <td>
-                    {% if f.has_incomplete %}
-                    <span class="badge badge-warning">Incomplete</span>
-                    {% else %}
-                    <span class="badge badge-success">Complete</span>
-                    {% endif %}
-                </td>
-            </tr>
-            {% empty %}
-            <tr><td colspan="5" style="text-align: center;">No matched faculty</td></tr>
-            {% endfor %}
-        </tbody>
-    </table>
-</div>
+<form method="post" action="{% url 'import_confirm' %}">
+    {% csrf_token %}
 
-<div class="actions">
-    <form method="post" action="{% url 'import_confirm' %}" style="display: inline;">
-        {% csrf_token %}
+    <div class="card">
+        <h3>Matched Faculty ({{ matched|length }})</h3>
+        <p>
+            <strong style="color: #28a745;">Green</strong> = new,
+            <strong style="color: #007bff;">Blue</strong> = update,
+            <strong style="color: #6c757d;">Gray</strong> = unchanged,
+            <strong style="color: #dc3545;">Red</strong> = point reduction (check to skip).
+        </p>
+
+        {% if reduction_count > 0 %}
+        <p style="margin-bottom: 1rem;">
+            <button type="button" class="btn btn-secondary btn-sm" onclick="selectAllReductions()">Select All Reductions</button>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="deselectAll()">Deselect All</button>
+        </p>
+        {% endif %}
+
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 50px;">Skip</th>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Points</th>
+                    <th>Quarters</th>
+                    <th>Status</th>
+                    <th>Change</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for f in matched %}
+                <tr style="{% if f.has_point_reduction %}background: #f8d7da;{% elif f.import_status == 'new' %}background: #d4edda;{% elif f.import_status == 'updated' %}background: #cce5ff;{% else %}background: #e9ecef;{% endif %}">
+                    <td style="text-align: center;">
+                        {% if f.import_status != 'unchanged' %}
+                        <input type="checkbox" name="skip_emails" value="{{ f.email }}"
+                               class="skip-checkbox {% if f.has_point_reduction %}reduction-checkbox{% endif %}"
+                               {% if f.has_point_reduction %}checked{% endif %}>
+                        {% else %}
+                        <span style="color: #999;">&mdash;</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ f.display_name }}</td>
+                    <td>{{ f.email }}</td>
+                    <td>{{ f.total_points }}</td>
+                    <td>{{ f.quarters|join:", " }}</td>
+                    <td>
+                        {% if f.import_status == 'new' %}
+                        <span class="badge badge-success">New</span>
+                        {% elif f.import_status == 'updated' %}
+                        <span class="badge badge-info">Update</span>
+                        {% else %}
+                        <span class="badge badge-secondary">No Change</span>
+                        {% endif %}
+                        {% if f.has_incomplete %}
+                        <span class="badge badge-warning">Incomplete</span>
+                        {% endif %}
+                        {% if f.has_point_reduction %}
+                        <span class="badge badge-danger">Point Loss</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if f.import_status == 'updated' %}
+                            <span style="font-size: 0.9em;">
+                                {{ f.old_points }} &rarr; {{ f.total_points }} pts
+                                {% if f.points_diff > 0 %}
+                                <span style="color: #28a745;">(+{{ f.points_diff }})</span>
+                                {% elif f.points_diff < 0 %}
+                                <span style="color: #dc3545;">({{ f.points_diff }})</span>
+                                {% endif %}
+                            </span>
+                        {% elif f.import_status == 'new' %}
+                            <span style="font-size: 0.9em; color: #6c757d;">{{ f.total_points }} pts, {{ f.activities_count }} activities</span>
+                        {% else %}
+                            <span style="font-size: 0.9em; color: #6c757d;">&mdash;</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="7" style="text-align: center;">No matched faculty</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="actions">
         <button type="submit" class="btn btn-success" {% if not matched %}disabled{% endif %}>
-            Confirm Import ({{ matched|length }} faculty)
+            Confirm Import
         </button>
-    </form>
-    <a href="{% url 'import_survey' %}" class="btn btn-secondary">Cancel</a>
-</div>
+        <a href="{% url 'import_survey' %}" class="btn btn-secondary">Cancel</a>
+    </div>
+</form>
+
+<script>
+function selectAllReductions() {
+    document.querySelectorAll('.reduction-checkbox').forEach(cb => cb.checked = true);
+}
+
+function deselectAll() {
+    document.querySelectorAll('.skip-checkbox').forEach(cb => cb.checked = false);
+}
+</script>
 {% endblock %}

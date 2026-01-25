@@ -1,0 +1,274 @@
+{% extends "base.html" %}
+
+{% block title %}Send Email - {{ campaign.name }}{% endblock %}
+
+{% block page_title %}Send Email{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{% url 'survey:campaign_list' %}">Campaigns</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'survey:campaign_detail' pk=campaign.pk %}">{{ campaign.name }}</a></li>
+        <li class="breadcrumb-item active">Send Email</li>
+    </ol>
+</nav>
+
+<div class="row">
+    <div class="col-lg-8">
+        <form method="post" id="sendEmailForm">
+            {% csrf_token %}
+
+            <!-- Email Type Selection -->
+            <div class="card mb-3">
+                <h5>Email Type</h5>
+                <div class="d-flex gap-3">
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="email_type" id="type_invitation" value="invitation" checked>
+                        <label class="form-check-label" for="type_invitation">
+                            <strong>Initial Invitation</strong>
+                            <br><small class="text-muted">For faculty who haven't been emailed yet</small>
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="email_type" id="type_reminder" value="reminder">
+                        <label class="form-check-label" for="type_reminder">
+                            <strong>Reminder</strong>
+                            <br><small class="text-muted">For faculty who haven't submitted yet</small>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recipient Selection -->
+            <div class="card">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="mb-0">Select Recipients</h5>
+                    <div>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="selectByType('invitation')">
+                            Select Not Emailed ({{ stats.not_emailed }})
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="selectByType('reminder')">
+                            Select Can Remind ({{ stats.can_remind }})
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="selectAll(false)">
+                            Deselect All
+                        </button>
+                    </div>
+                </div>
+
+                <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                    <table class="table table-sm table-hover">
+                        <thead style="position: sticky; top: 0; background: white;">
+                            <tr>
+                                <th style="width: 40px;">
+                                    <input type="checkbox" id="selectAllCheckbox" onchange="toggleAll(this)">
+                                </th>
+                                <th>Name</th>
+                                <th>Email</th>
+                                <th>Status</th>
+                                <th>Emailed</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for r in recipients %}
+                            <tr data-can-invitation="{{ r.can_send_invitation|yesno:'true,false' }}"
+                                data-can-reminder="{{ r.can_send_reminder|yesno:'true,false' }}"
+                                data-status="{{ r.status }}">
+                                <td>
+                                    <input type="checkbox" name="recipients" value="{{ r.email }}" class="recipient-checkbox">
+                                </td>
+                                <td>{{ r.name }}</td>
+                                <td><small>{{ r.email }}</small></td>
+                                <td>
+                                    {% if r.status == 'submitted' %}
+                                        <span class="badge bg-success">Submitted</span>
+                                    {% elif r.status == 'in_progress' %}
+                                        <span class="badge bg-warning">In Progress</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">Pending</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if r.email_sent %}
+                                        <span class="text-success"><i class="bi bi-check-circle"></i> Yes</span>
+                                    {% else %}
+                                        <span class="text-muted">No</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="5" class="text-center text-muted">No recipients available</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="mt-3 d-flex justify-content-between align-items-center">
+                    <span class="text-muted">
+                        <span id="selectedCount">0</span> recipient(s) selected
+                    </span>
+                    <div>
+                        <a href="{% url 'survey:campaign_detail' pk=campaign.pk %}" class="btn btn-secondary">
+                            Cancel
+                        </a>
+                        <button type="submit" class="btn btn-primary" id="sendBtn" disabled>
+                            <i class="bi bi-envelope"></i> Send Email
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <div class="col-lg-4">
+        <!-- Email Preview - Invitation -->
+        <div class="card" id="invitationPreview">
+            <h6><i class="bi bi-envelope"></i> Invitation Email Preview</h6>
+            <div class="mb-2">
+                <strong>Subject:</strong><br>
+                <span class="text-muted">
+                    {% if campaign.email_subject %}
+                        {{ campaign.email_subject }}
+                    {% else %}
+                        [UNMC Anesthesiology] Academic Achievement Survey - {{ campaign.quarter }}
+                    {% endif %}
+                </span>
+            </div>
+            <hr>
+            <div style="font-size: 0.9em; white-space: pre-wrap;">{% if campaign.email_body %}{{ campaign.email_body }}{% else %}Dear {first_name} {last_name},
+
+You are invited to complete the Academic Achievement Survey for {{ campaign.quarter }}.
+
+Please click the link below to begin:
+{survey_link}
+
+Deadline: {{ campaign.closes_at|date:"F j, Y" }} at {{ campaign.closes_at|time:"g:i A" }}
+
+This link is unique to you. Please do not share it.
+
+Thank you,
+UNMC Department of Anesthesiology{% endif %}</div>
+            <hr>
+            <a href="{% url 'survey:campaign_edit' pk=campaign.pk %}" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-pencil"></i> Edit Email Templates
+            </a>
+        </div>
+
+        <!-- Email Preview - Reminder -->
+        <div class="card" id="reminderPreview" style="display: none;">
+            <h6><i class="bi bi-bell"></i> Reminder Email Preview</h6>
+            <div class="mb-2">
+                <strong>Subject:</strong><br>
+                <span class="text-muted">
+                    {% if campaign.reminder_subject %}
+                        {{ campaign.reminder_subject }}
+                    {% else %}
+                        [UNMC Anesthesiology] REMINDER: Academic Achievement Survey - {{ campaign.quarter }}
+                    {% endif %}
+                </span>
+            </div>
+            <hr>
+            <div style="font-size: 0.9em; white-space: pre-wrap;">{% if campaign.reminder_body %}{{ campaign.reminder_body }}{% else %}Dear {first_name} {last_name},
+
+This is a reminder that your Academic Achievement Survey for {{ campaign.quarter }} is {status}.
+
+Please click the link below to complete your submission:
+{survey_link}
+
+Deadline: {{ campaign.closes_at|date:"F j, Y" }} at {{ campaign.closes_at|time:"g:i A" }}
+
+Thank you,
+UNMC Department of Anesthesiology{% endif %}</div>
+            <hr>
+            <a href="{% url 'survey:campaign_edit' pk=campaign.pk %}" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-pencil"></i> Edit Email Templates
+            </a>
+        </div>
+
+        <!-- Quick Stats -->
+        <div class="card mt-3 bg-light">
+            <h6>Quick Stats</h6>
+            <dl class="mb-0">
+                <dt>Total Faculty</dt>
+                <dd>{{ stats.total }}</dd>
+                <dt>Not Yet Emailed</dt>
+                <dd>{{ stats.not_emailed }}</dd>
+                <dt>Can Send Reminder</dt>
+                <dd>{{ stats.can_remind }}</dd>
+                <dt>Already Submitted</dt>
+                <dd>{{ stats.submitted }}</dd>
+            </dl>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Update selected count and button state
+function updateSelectedCount() {
+    const checked = document.querySelectorAll('.recipient-checkbox:checked').length;
+    document.getElementById('selectedCount').textContent = checked;
+    document.getElementById('sendBtn').disabled = checked === 0;
+}
+
+// Toggle all checkboxes
+function toggleAll(masterCheckbox) {
+    document.querySelectorAll('.recipient-checkbox').forEach(cb => {
+        cb.checked = masterCheckbox.checked;
+    });
+    updateSelectedCount();
+}
+
+// Select all / deselect all
+function selectAll(checked) {
+    document.querySelectorAll('.recipient-checkbox').forEach(cb => {
+        cb.checked = checked;
+    });
+    document.getElementById('selectAllCheckbox').checked = checked;
+    updateSelectedCount();
+}
+
+// Select by type (invitation or reminder candidates)
+function selectByType(type) {
+    const attr = type === 'invitation' ? 'data-can-invitation' : 'data-can-reminder';
+    document.querySelectorAll('.recipient-checkbox').forEach(cb => {
+        const row = cb.closest('tr');
+        cb.checked = row.getAttribute(attr) === 'true';
+    });
+    updateSelectedCount();
+}
+
+// Add event listeners to checkboxes
+document.querySelectorAll('.recipient-checkbox').forEach(cb => {
+    cb.addEventListener('change', updateSelectedCount);
+});
+
+// Confirm before sending
+document.getElementById('sendEmailForm').addEventListener('submit', function(e) {
+    const count = document.querySelectorAll('.recipient-checkbox:checked').length;
+    const type = document.querySelector('input[name="email_type"]:checked').value;
+    if (!confirm(`Send ${type} email to ${count} recipient(s)?`)) {
+        e.preventDefault();
+    }
+});
+
+// Toggle email preview based on selected type
+document.querySelectorAll('input[name="email_type"]').forEach(radio => {
+    radio.addEventListener('change', function() {
+        const invitationPreview = document.getElementById('invitationPreview');
+        const reminderPreview = document.getElementById('reminderPreview');
+
+        if (this.value === 'invitation') {
+            invitationPreview.style.display = '';
+            reminderPreview.style.display = 'none';
+        } else {
+            invitationPreview.style.display = 'none';
+            reminderPreview.style.display = '';
+        }
+    });
+});
+</script>
+{% endblock %}

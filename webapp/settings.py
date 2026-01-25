@@ -208,7 +208,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 EMAIL_BACKEND = os.environ.get(
     'EMAIL_BACKEND',
-    'django.core.mail.backends.filebased.EmailBackend'  # Dev: saves to files
+    'django.core.mail.backends.smtp.EmailBackend'  # SMTP: sends real emails
 )
 
 # Directory for email files (only used with filebased backend)

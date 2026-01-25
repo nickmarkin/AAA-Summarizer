@@ -5,7 +5,7 @@ Admin views for campaign management and faculty views for survey completion.
 """
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
-from django.http import JsonResponse, Http404
+from django.http import JsonResponse, Http404, HttpResponse
 from django.utils import timezone
 from django.db import transaction
 from django.views.decorators.http import require_POST, require_GET
@@ -159,6 +159,10 @@ def campaign_edit(request, pk):
         campaign.email_subject = request.POST.get('email_subject', '').strip()
         campaign.email_body = request.POST.get('email_body', '').strip()
 
+        # Reminder email customization
+        campaign.reminder_subject = request.POST.get('reminder_subject', '').strip()
+        campaign.reminder_body = request.POST.get('reminder_body', '').strip()
+
         campaign.save()
 
         messages.success(request, 'Campaign updated successfully')
@@ -230,6 +234,145 @@ def campaign_update_faculty(request, pk):
         messages.info(request, 'No changes made')
 
     return redirect('survey:campaign_detail', pk=pk)
+
+
+@require_POST
+def campaign_sync_from_import(request, pk):
+    """
+    Sync FacultySurveyData to SurveyResponse for faculty who have imported data
+    but no SurveyResponse yet. This is a safety net for cases where data was
+    imported before the campaign feature was added.
+    """
+    from reports_app.models import FacultySurveyData
+    from reports_app.views import _convert_activities_to_survey_format
+
+    campaign = get_object_or_404(SurveyCampaign, pk=pk)
+
+    synced_count = 0
+    skipped_count = 0
+
+    # Get all invitations that don't have a SurveyResponse yet
+    for invitation in campaign.invitations.select_related('faculty'):
+        # Check if already has response
+        if SurveyResponse.objects.filter(invitation=invitation).exists():
+            continue
+
+        # Find matching FacultySurveyData
+        fsd = FacultySurveyData.objects.filter(
+            faculty=invitation.faculty,
+            academic_year=campaign.academic_year
+        ).first()
+
+        if fsd and fsd.activities_json:
+            # Convert and create SurveyResponse
+            response_data = _convert_activities_to_survey_format(fsd.activities_json)
+
+            SurveyResponse.objects.create(
+                invitation=invitation,
+                response_data=response_data,
+                citizenship_complete=True,
+                education_complete=True,
+                research_complete=True,
+                leadership_complete=True,
+                content_expert_complete=True,
+                citizenship_points=fsd.citizenship_points or 0,
+                education_points=fsd.education_points or 0,
+                research_points=fsd.research_points or 0,
+                leadership_points=fsd.leadership_points or 0,
+                content_expert_points=fsd.content_expert_points or 0,
+            )
+
+            # Mark as submitted (imported data = completed submission)
+            invitation.status = 'submitted'
+            invitation.submitted_at = timezone.now()
+            invitation.save(update_fields=['status', 'submitted_at', 'updated_at'])
+
+            synced_count += 1
+        else:
+            skipped_count += 1
+
+    if synced_count:
+        messages.success(request, f'Synced {synced_count} faculty from imported data.')
+    else:
+        messages.info(request, 'No faculty needed syncing (all already have survey responses or no import data).')
+
+    return redirect('survey:campaign_detail', pk=pk)
+
+
+def campaign_send_email(request, pk):
+    """Send email page - select recipients and message type."""
+    from django.conf import settings
+
+    campaign = get_object_or_404(SurveyCampaign, pk=pk)
+
+    # Get all invitations with faculty info
+    invitations = campaign.invitations.select_related('faculty').order_by(
+        'faculty__last_name', 'faculty__first_name'
+    )
+
+    # Build recipient list with status info
+    recipients = []
+    for inv in invitations:
+        recipients.append({
+            'invitation': inv,
+            'faculty': inv.faculty,
+            'email': inv.faculty.email,
+            'name': inv.faculty.display_name,
+            'status': inv.status,
+            'email_sent': inv.email_sent_at is not None,
+            'can_send_invitation': inv.email_sent_at is None,
+            'can_send_reminder': inv.email_sent_at is not None and inv.status != 'submitted',
+        })
+
+    if request.method == 'POST':
+        selected_emails = request.POST.getlist('recipients')
+        email_type = request.POST.get('email_type', 'invitation')
+
+        if not selected_emails:
+            messages.warning(request, 'No recipients selected.')
+            return redirect('survey:campaign_send_email', pk=pk)
+
+        sent_count = 0
+        failed_count = 0
+
+        for email in selected_emails:
+            inv = campaign.invitations.filter(faculty__email=email).first()
+            if inv:
+                if email_type == 'invitation':
+                    success = _send_invitation_email(inv)
+                else:  # reminder
+                    success = _send_reminder_email(inv)
+
+                if success:
+                    sent_count += 1
+                else:
+                    failed_count += 1
+
+        if sent_count > 0:
+            messages.success(request, f'Successfully sent {sent_count} {email_type} email(s).')
+        if failed_count > 0:
+            messages.error(request, f'Failed to send {failed_count} email(s). Check email configuration.')
+
+        return redirect('survey:campaign_send_email', pk=pk)
+
+    # GET - show the form
+    # Get site URL for preview
+    site_url = getattr(settings, 'SITE_URL', None)
+    if not site_url:
+        site_url = request.build_absolute_uri('/')[:-1]
+
+    context = {
+        'campaign': campaign,
+        'recipients': recipients,
+        'site_url': site_url,
+        'stats': {
+            'total': len(recipients),
+            'not_emailed': sum(1 for r in recipients if r['can_send_invitation']),
+            'can_remind': sum(1 for r in recipients if r['can_send_reminder']),
+            'submitted': sum(1 for r in recipients if r['status'] == 'submitted'),
+        }
+    }
+    return render(request, 'survey/admin/campaign_send_email.html', context)
 
 
 def campaign_send_invitations(request, pk):
@@ -453,6 +596,167 @@ def campaign_export_csv(request, pk):
 
         writer.writerow(row)
 
+    return response
+
+
+def campaign_export_mailmerge_csv(request, pk):
+    """Export faculty list with portal links for Outlook mail merge."""
+    import csv
+    from django.conf import settings
+
+    campaign = get_object_or_404(SurveyCampaign, pk=pk)
+
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = f'attachment; filename="mailmerge_{campaign.pk}_{timezone.now().strftime("%Y%m%d")}.csv"'
+
+    writer = csv.writer(response)
+    writer.writerow([
+        'FirstName',
+        'LastName',
+        'Email',
+        'Division',
+        'PortalURL',
+        'Deadline',
+        'CampaignName',
+        'Quarter',
+    ])
+
+    # Get site URL
+    site_url = getattr(settings, 'SITE_URL', None)
+    if not site_url:
+        site_url = request.build_absolute_uri('/')[:-1]
+
+    # Format deadline (convert to local time)
+    from django.utils.timezone import localtime
+    local_closes = localtime(campaign.closes_at)
+    deadline = local_closes.strftime('%B %d, %Y at %I:%M %p')
+
+    # Get all faculty with invitations for this campaign
+    invitations = campaign.invitations.select_related('faculty').all().order_by(
+        'faculty__last_name', 'faculty__first_name'
+    )
+
+    for inv in invitations:
+        faculty = inv.faculty
+        portal_url = f"{site_url}/my/{faculty.access_token}/"
+        writer.writerow([
+            faculty.first_name,
+            faculty.last_name,
+            faculty.email,
+            faculty.get_division_display() or '',
+            portal_url,
+            deadline,
+            campaign.name,
+            campaign.get_quarter_display(),
+        ])
+
+    return response
+
+
+def campaign_export_mailmerge_word(request, pk):
+    """Export email template as Word document with mail merge fields."""
+    from docx import Document
+    from docx.shared import Pt
+    from io import BytesIO
+
+    campaign = get_object_or_404(SurveyCampaign, pk=pk)
+
+    # Create a new Document
+    doc = Document()
+
+    # Add title
+    title = doc.add_paragraph()
+    title_run = title.add_run(f'Mail Merge Template - {campaign.name}')
+    title_run.bold = True
+    title_run.font.size = Pt(14)
+
+    doc.add_paragraph()  # Spacer
+
+    # Instructions
+    instructions = doc.add_paragraph()
+    inst_run = instructions.add_run('Instructions: ')
+    inst_run.bold = True
+    instructions.add_run(
+        'Use this template with Outlook mail merge. The fields below (e.g., «FirstName») '
+        'will be replaced with data from the CSV file. In Word, go to Mailings > Start Mail Merge > '
+        'E-mail Messages, then select your CSV as the data source.'
+    )
+
+    doc.add_paragraph()  # Spacer
+
+    # Subject line
+    subject_para = doc.add_paragraph()
+    subject_label = subject_para.add_run('Subject: ')
+    subject_label.bold = True
+    if campaign.email_subject:
+        subject_para.add_run(campaign.email_subject)
+    else:
+        subject_para.add_run(f'[UNMC Anesthesiology] Academic Achievement Survey - {campaign.get_quarter_display()}')
+
+    doc.add_paragraph()  # Spacer
+
+    # Email body with merge fields
+    body_label = doc.add_paragraph()
+    body_label.add_run('Email Body:').bold = True
+
+    # Get email body or use default
+    if campaign.email_body:
+        body_text = campaign.email_body
+    else:
+        body_text = f"""Dear {{first_name}} {{last_name}},
+
+You are invited to complete the Academic Achievement Survey for {campaign.get_quarter_display()}.
+
+Please click the link below to access your personal portal:
+{{survey_link}}
+
+Deadline: {{deadline}}
+
+This link is unique to you. Please do not share it.
+
+Thank you,
+UNMC Department of Anesthesiology"""
+
+    # Replace placeholders with Word mail merge field format
+    body_text = body_text.replace('{first_name}', '«FirstName»')
+    body_text = body_text.replace('{last_name}', '«LastName»')
+    body_text = body_text.replace('{survey_link}', '«PortalURL»')
+    body_text = body_text.replace('{deadline}', '«Deadline»')
+
+    # Add body text
+    for line in body_text.split('\n'):
+        doc.add_paragraph(line)
+
+    doc.add_paragraph()  # Spacer
+
+    # Field reference
+    ref_para = doc.add_paragraph()
+    ref_run = ref_para.add_run('Available Merge Fields (from CSV):')
+    ref_run.bold = True
+
+    fields = [
+        ('«FirstName»', 'Faculty first name'),
+        ('«LastName»', 'Faculty last name'),
+        ('«Email»', 'Faculty email address'),
+        ('«Division»', 'Faculty division'),
+        ('«PortalURL»', 'Personal portal link'),
+        ('«Deadline»', 'Survey deadline'),
+        ('«CampaignName»', 'Campaign name'),
+        ('«Quarter»', 'Quarter (e.g., Q1-Q2)'),
+    ]
+    for field, desc in fields:
+        doc.add_paragraph(f'  {field} - {desc}')
+
+    # Save to BytesIO
+    file_stream = BytesIO()
+    doc.save(file_stream)
+    file_stream.seek(0)
+
+    response = HttpResponse(
+        file_stream.read(),
+        content_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    )
+    response['Content-Disposition'] = f'attachment; filename="mailmerge_template_{campaign.pk}.docx"'
     return response
 
 
@@ -1229,6 +1533,7 @@ def _send_reminder_email(invitation):
     from django.core.mail import send_mail
     from django.conf import settings
     from django.urls import reverse
+    from django.utils.timezone import localtime
 
     try:
         campaign = invitation.campaign
@@ -1246,12 +1551,30 @@ def _send_reminder_email(invitation):
         else:
             from_email = settings.DEFAULT_FROM_EMAIL
 
-        subject = f"{settings.SURVEY_EMAIL_SUBJECT_PREFIX}REMINDER: Academic Achievement Survey - {campaign.quarter}"
-
         status_msg = "not yet started" if invitation.status == 'pending' else "in progress"
-        deadline = campaign.closes_at.strftime('%B %d, %Y at %I:%M %p')
+        deadline = localtime(campaign.closes_at).strftime('%B %d, %Y at %I:%M %p')
 
-        message = f"""Dear {faculty.first_name} {faculty.last_name},
+        # Use custom subject or default
+        if campaign.reminder_subject:
+            subject = campaign.reminder_subject
+            # Replace placeholders
+            subject = subject.replace('{first_name}', faculty.first_name)
+            subject = subject.replace('{last_name}', faculty.last_name)
+            subject = subject.replace('{quarter}', campaign.quarter)
+        else:
+            subject = f"{settings.SURVEY_EMAIL_SUBJECT_PREFIX}REMINDER: Academic Achievement Survey - {campaign.quarter}"
+
+        # Use custom body or default
+        if campaign.reminder_body:
+            message = campaign.reminder_body
+            # Replace placeholders
+            message = message.replace('{first_name}', faculty.first_name)
+            message = message.replace('{last_name}', faculty.last_name)
+            message = message.replace('{survey_link}', survey_url)
+            message = message.replace('{deadline}', deadline)
+            message = message.replace('{status}', status_msg)
+        else:
+            message = f"""Dear {faculty.first_name} {faculty.last_name},
 
 This is a reminder that your Academic Achievement Survey for {campaign.quarter} is {status_msg}.
 

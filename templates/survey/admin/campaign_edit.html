@@ -73,31 +73,97 @@
                     </div>
                 </div>
 
-                <div class="mb-3">
-                    <label for="email_subject" class="form-label">Subject</label>
-                    <input type="text" name="email_subject" id="email_subject"
-                           class="form-control"
-                           placeholder="Leave blank for default: [UNMC Anesthesiology] Academic Achievement Survey - {{ campaign.quarter }}"
-                           value="{{ campaign.email_subject }}">
-                </div>
+                <!-- Initial Invitation Email -->
+                <div class="card bg-light mb-3">
+                    <div class="card-body">
+                        <h6 class="card-title"><i class="bi bi-envelope"></i> Initial Invitation Email</h6>
 
-                <div class="mb-3">
-                    <label for="email_body" class="form-label">Message Body</label>
-                    <textarea name="email_body" id="email_body" class="form-control" rows="10"
-                              placeholder="Leave blank for default message. Use placeholders: {first_name}, {last_name}, {survey_link}, {deadline}">{{ campaign.email_body }}</textarea>
-                    <div class="form-text">
-                        <strong>Available placeholders:</strong>
-                        <code>{first_name}</code>, <code>{last_name}</code>, <code>{survey_link}</code>, <code>{deadline}</code>
+                        <div class="mb-3">
+                            <label for="email_subject" class="form-label">Subject</label>
+                            <input type="text" name="email_subject" id="email_subject"
+                                   class="form-control"
+                                   placeholder="Leave blank for default: [UNMC Anesthesiology] Academic Achievement Survey - {{ campaign.quarter }}"
+                                   value="{{ campaign.email_subject }}">
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="email_body" class="form-label">Message Body</label>
+                            <textarea name="email_body" id="email_body" class="form-control" rows="8"
+                                      placeholder="Leave blank for default message. Use placeholders: {first_name}, {last_name}, {survey_link}, {deadline}">{{ campaign.email_body }}</textarea>
+                            <div class="form-text">
+                                <strong>Placeholders:</strong>
+                                <code>{first_name}</code>, <code>{last_name}</code>, <code>{survey_link}</code>, <code>{deadline}</code>
+                            </div>
+                        </div>
+
+                        <div class="d-flex gap-2">
+                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="loadDefaultEmail('invitation')">
+                                <i class="bi bi-arrow-counterclockwise"></i> Load Default
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-info" onclick="previewEmail('invitation')">
+                                <i class="bi bi-eye"></i> Preview
+                            </button>
+                        </div>
                     </div>
                 </div>
 
-                <div class="mb-3">
-                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="loadDefaultEmail()">
-                        <i class="bi bi-arrow-counterclockwise"></i> Load Default Template
-                    </button>
-                    <button type="button" class="btn btn-sm btn-outline-info" onclick="previewEmail()">
-                        <i class="bi bi-eye"></i> Preview
-                    </button>
+                <!-- Reminder Email -->
+                <div class="card bg-light mb-3">
+                    <div class="card-body">
+                        <h6 class="card-title"><i class="bi bi-bell"></i> Reminder Email</h6>
+
+                        <div class="mb-3">
+                            <label for="reminder_subject" class="form-label">Subject</label>
+                            <input type="text" name="reminder_subject" id="reminder_subject"
+                                   class="form-control"
+                                   placeholder="Leave blank for default: [UNMC Anesthesiology] REMINDER: Academic Achievement Survey - {{ campaign.quarter }}"
+                                   value="{{ campaign.reminder_subject }}">
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="reminder_body" class="form-label">Message Body</label>
+                            <textarea name="reminder_body" id="reminder_body" class="form-control" rows="8"
+                                      placeholder="Leave blank for default message. Use placeholders: {first_name}, {last_name}, {survey_link}, {deadline}, {status}">{{ campaign.reminder_body }}</textarea>
+                            <div class="form-text">
+                                <strong>Placeholders:</strong>
+                                <code>{first_name}</code>, <code>{last_name}</code>, <code>{survey_link}</code>, <code>{deadline}</code>, <code>{status}</code> (e.g., "not yet started" or "in progress")
+                            </div>
+                        </div>
+
+                        <div class="d-flex gap-2">
+                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="loadDefaultEmail('reminder')">
+                                <i class="bi bi-arrow-counterclockwise"></i> Load Default
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-info" onclick="previewEmail('reminder')">
+                                <i class="bi bi-eye"></i> Preview
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <hr>
+
+                <h5 class="mb-3">Outlook Mail Merge Export</h5>
+                <p class="text-muted small">Export files for sending emails via Outlook mail merge with Word and Excel.</p>
+
+                <div class="mb-3 d-flex gap-2 flex-wrap">
+                    <a href="{% url 'survey:campaign_export_mailmerge_csv' pk=campaign.pk %}" class="btn btn-sm btn-outline-success">
+                        <i class="bi bi-file-earmark-spreadsheet"></i> Export Survey Data .csv
+                    </a>
+                    <a href="{% url 'survey:campaign_export_mailmerge_word' pk=campaign.pk %}" class="btn btn-sm btn-outline-primary">
+                        <i class="bi bi-file-earmark-word"></i> Export Word Template
+                    </a>
+                </div>
+
+                <div class="alert alert-info small mb-3">
+                    <strong>How to use:</strong>
+                    <ol class="mb-0 ps-3">
+                        <li>Export the CSV file (contains faculty names, emails, portal links)</li>
+                        <li>Export the Word template (contains merge fields like «FirstName»)</li>
+                        <li>In Word: Mailings → Start Mail Merge → E-mail Messages</li>
+                        <li>Select Recipients → Use Existing List → Choose the CSV file</li>
+                        <li>Edit the template as needed, then Finish & Merge → Send E-mail</li>
+                    </ol>
                 </div>
 
                 <hr>
@@ -150,7 +216,7 @@
 
 {% block scripts %}
 <script>
-const defaultEmailBody = `Dear {first_name} {last_name},
+const defaultInvitationBody = `Dear {first_name} {last_name},
 
 You are invited to complete the Academic Achievement Survey for {{ campaign.quarter }}.
 
@@ -164,21 +230,46 @@ This link is unique to you. Please do not share it.
 Thank you,
 UNMC Department of Anesthesiology`;
 
-function loadDefaultEmail() {
-    document.getElementById('email_body').value = defaultEmailBody;
+const defaultReminderBody = `Dear {first_name} {last_name},
+
+This is a reminder that your Academic Achievement Survey for {{ campaign.quarter }} is {status}.
+
+Please click the link below to complete your submission:
+{survey_link}
+
+Deadline: {deadline}
+
+Thank you,
+UNMC Department of Anesthesiology`;
+
+function loadDefaultEmail(type) {
+    if (type === 'invitation') {
+        document.getElementById('email_body').value = defaultInvitationBody;
+    } else if (type === 'reminder') {
+        document.getElementById('reminder_body').value = defaultReminderBody;
+    }
 }
 
-function previewEmail() {
+function previewEmail(type) {
     const fromName = document.getElementById('email_from_name').value || 'AVC Survey';
     const fromEmail = document.getElementById('email_from_address').value || 'noreply@unmc.edu';
-    const subject = document.getElementById('email_subject').value || '[UNMC Anesthesiology] Academic Achievement Survey - {{ campaign.quarter }}';
-    let body = document.getElementById('email_body').value || defaultEmailBody;
+
+    let subject, body;
+
+    if (type === 'invitation') {
+        subject = document.getElementById('email_subject').value || '[UNMC Anesthesiology] Academic Achievement Survey - {{ campaign.quarter }}';
+        body = document.getElementById('email_body').value || defaultInvitationBody;
+    } else {
+        subject = document.getElementById('reminder_subject').value || '[UNMC Anesthesiology] REMINDER: Academic Achievement Survey - {{ campaign.quarter }}';
+        body = document.getElementById('reminder_body').value || defaultReminderBody;
+    }
 
     // Replace placeholders with sample values
     body = body.replace(/{first_name}/g, 'John');
     body = body.replace(/{last_name}/g, 'Doe');
     body = body.replace(/{survey_link}/g, 'https://your-site.edu/my/SAMPLE-PORTAL-TOKEN/');
     body = body.replace(/{deadline}/g, '{{ campaign.closes_at|date:"F j, Y" }} at {{ campaign.closes_at|time:"g:i A" }}');
+    body = body.replace(/{status}/g, 'not yet started');
 
     document.getElementById('previewFrom').textContent = `${fromName} <${fromEmail}>`;
     document.getElementById('previewSubject').textContent = subject;
