@@ -78,8 +78,8 @@
             <div class="d-grid gap-2">
                 <a href="{% url 'survey:campaign_send_email' pk=campaign.pk %}" class="btn btn-primary">
                     <i class="bi bi-envelope"></i> Send Email
-                    {% if stats.not_emailed > 0 or stats.not_submitted > 0 %}
-                        <span class="badge bg-light text-primary ms-1">{{ stats.not_emailed|add:stats.not_submitted }}</span>
+                    {% if stats.not_submitted > 0 %}
+                        <span class="badge bg-light text-primary ms-1">{{ stats.not_submitted }}</span>
                     {% endif %}
                 </a>
                 <a href="{% url 'survey:campaign_edit' pk=campaign.pk %}" class="btn btn-outline-secondary">

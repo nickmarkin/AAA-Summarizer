@@ -58,3 +58,15 @@ def getattr_filter(obj, attr):
     if obj is None:
         return None
     return getattr(obj, attr, None)
+
+
+@register.filter
+def pprint(value):
+    """
+    Pretty print a Python object as formatted JSON.
+    Usage: {{ mydict|pprint }}
+    """
+    try:
+        return json.dumps(value, indent=2, sort_keys=True)
+    except (TypeError, ValueError):
+        return str(value)

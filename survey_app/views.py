@@ -11,7 +11,7 @@ from django.db import transaction
 from django.views.decorators.http import require_POST, require_GET
 
 from reports_app.models import AcademicYear, FacultyMember
-from .models import SurveyCampaign, SurveyInvitation, SurveyResponse, EmailLog
+from .models import SurveyCampaign, SurveyInvitation, SurveyResponse, EmailLog, SurveyConfigOverride
 from .survey_config import (
     get_category_config, calculate_category_points,
     get_next_category, get_prev_category, CATEGORY_ORDER, CATEGORY_NAMES,
@@ -921,8 +921,7 @@ def faculty_portal(request, token):
         closes_at__gte=now,
     ).order_by('quarter')
 
-    # Get or create invitations for each open campaign
-    # Auto-create invitation if faculty should receive surveys and doesn't have one yet
+    # Get invitations for open campaigns (only show campaigns faculty was explicitly added to)
     open_surveys = []
     for campaign in open_campaigns:
         invitation = SurveyInvitation.objects.filter(
@@ -930,13 +929,7 @@ def faculty_portal(request, token):
             faculty=faculty
         ).first()
 
-        # Auto-create invitation if faculty should receive surveys
-        if not invitation and faculty.should_receive_surveys:
-            invitation = SurveyInvitation.objects.create(
-                campaign=campaign,
-                faculty=faculty
-            )
-
+        # Only show campaigns where faculty has an invitation
         if invitation:
             response = SurveyResponse.objects.filter(
                 invitation=invitation
@@ -1855,3 +1848,198 @@ def _merge_response_to_faculty_data(response):
     faculty_data.quarters_reported = list(quarters)
 
     faculty_data.save()
+
+
+# =============================================================================
+# SURVEY CONFIG MANAGEMENT - JSON export/import
+# =============================================================================
+
+def config_manage(request):
+    """Manage survey configuration overrides."""
+    from .survey_config import POINT_VALUES, SURVEY_CATEGORIES, CATEGORY_ORDER, CATEGORY_NAMES
+
+    # Get all config overrides
+    configs = SurveyConfigOverride.objects.all()
+
+    # Get the active config for display
+    active_config = SurveyConfigOverride.get_active_config()
+
+    # Current default config summary
+    default_config = {
+        'point_values': POINT_VALUES,
+        'categories': SURVEY_CATEGORIES,
+        'category_order': CATEGORY_ORDER,
+        'category_names': CATEGORY_NAMES,
+    }
+
+    context = {
+        'configs': configs,
+        'active_config': active_config,
+        'default_config': default_config,
+        'using_default': active_config is None,
+    }
+    return render(request, 'survey/admin/config_manage.html', context)
+
+
+@require_GET
+def config_export(request, pk=None):
+    """Export survey configuration as JSON file."""
+    import json
+    from .survey_config import POINT_VALUES, SURVEY_CATEGORIES, CATEGORY_ORDER, CATEGORY_NAMES
+
+    if pk:
+        # Export a specific saved config
+        config_override = get_object_or_404(SurveyConfigOverride, pk=pk)
+        config_data = config_override.config_json
+        filename = f"survey_config_{config_override.pk}_{timezone.now().strftime('%Y%m%d')}.json"
+    else:
+        # Export default config
+        config_data = {
+            'point_values': POINT_VALUES,
+            'categories': SURVEY_CATEGORIES,
+            'category_order': CATEGORY_ORDER,
+            'category_names': CATEGORY_NAMES,
+        }
+        filename = f"survey_config_default_{timezone.now().strftime('%Y%m%d')}.json"
+
+    response = HttpResponse(
+        json.dumps(config_data, indent=2),
+        content_type='application/json'
+    )
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    return response
+
+
+def config_upload(request):
+    """Upload and preview a new survey configuration JSON."""
+    import json
+
+    if request.method == 'POST':
+        action = request.POST.get('action')
+
+        if action == 'upload':
+            # Handle file upload
+            if 'config_file' not in request.FILES:
+                messages.error(request, 'Please select a JSON file to upload.')
+                return redirect('survey:config_manage')
+
+            uploaded_file = request.FILES['config_file']
+
+            try:
+                content = uploaded_file.read().decode('utf-8')
+                config_data = json.loads(content)
+
+                # Validate structure
+                required_keys = ['point_values', 'categories', 'category_order', 'category_names']
+                missing_keys = [k for k in required_keys if k not in config_data]
+
+                if missing_keys:
+                    messages.error(request, f'Invalid config file. Missing keys: {", ".join(missing_keys)}')
+                    return redirect('survey:config_manage')
+
+                # Store in session for preview
+                request.session['pending_config'] = config_data
+                request.session['pending_config_filename'] = uploaded_file.name
+
+                messages.info(request, 'Configuration loaded. Review the preview below and click Save to apply.')
+                return redirect('survey:config_preview')
+
+            except json.JSONDecodeError as e:
+                messages.error(request, f'Invalid JSON file: {e}')
+                return redirect('survey:config_manage')
+            except Exception as e:
+                messages.error(request, f'Error reading file: {e}')
+                return redirect('survey:config_manage')
+
+        elif action == 'save':
+            # Save the pending config from session
+            pending_config = request.session.get('pending_config')
+            if not pending_config:
+                messages.error(request, 'No pending configuration to save.')
+                return redirect('survey:config_manage')
+
+            name = request.POST.get('name', 'Uploaded Configuration')
+            activate = request.POST.get('activate') == 'on'
+
+            config = SurveyConfigOverride.objects.create(
+                name=name,
+                config_json=pending_config,
+                is_active=activate,
+            )
+
+            # Clear session
+            del request.session['pending_config']
+            if 'pending_config_filename' in request.session:
+                del request.session['pending_config_filename']
+
+            if activate:
+                messages.success(request, f'Configuration "{name}" saved and activated.')
+            else:
+                messages.success(request, f'Configuration "{name}" saved. Activate it to use.')
+
+            return redirect('survey:config_manage')
+
+    return redirect('survey:config_manage')
+
+
+def config_preview(request):
+    """Preview pending configuration before saving."""
+    from .survey_config import POINT_VALUES, SURVEY_CATEGORIES, CATEGORY_ORDER, CATEGORY_NAMES
+
+    pending_config = request.session.get('pending_config')
+    if not pending_config:
+        messages.warning(request, 'No pending configuration to preview.')
+        return redirect('survey:config_manage')
+
+    # Current default config for comparison
+    default_config = {
+        'point_values': POINT_VALUES,
+        'categories': SURVEY_CATEGORIES,
+        'category_order': CATEGORY_ORDER,
+        'category_names': CATEGORY_NAMES,
+    }
+
+    filename = request.session.get('pending_config_filename', 'uploaded file')
+
+    context = {
+        'pending_config': pending_config,
+        'default_config': default_config,
+        'filename': filename,
+    }
+    return render(request, 'survey/admin/config_preview.html', context)
+
+
+@require_POST
+def config_activate(request, pk):
+    """Activate a configuration override."""
+    config = get_object_or_404(SurveyConfigOverride, pk=pk)
+    config.is_active = True
+    config.save()  # This will deactivate others due to model's save() method
+
+    messages.success(request, f'Configuration "{config.name}" is now active.')
+    return redirect('survey:config_manage')
+
+
+@require_POST
+def config_deactivate(request, pk):
+    """Deactivate a configuration (revert to default)."""
+    config = get_object_or_404(SurveyConfigOverride, pk=pk)
+    config.is_active = False
+    config.save()
+
+    messages.success(request, 'Reverted to default configuration.')
+    return redirect('survey:config_manage')
+
+
+@require_POST
+def config_delete(request, pk):
+    """Delete a configuration override."""
+    config = get_object_or_404(SurveyConfigOverride, pk=pk)
+    name = config.name
+
+    if config.is_active:
+        messages.warning(request, 'Deactivated and deleted configuration. Now using default.')
+
+    config.delete()
+    messages.success(request, f'Configuration "{name}" deleted.')
+    return redirect('survey:config_manage')

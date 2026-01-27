@@ -142,6 +142,35 @@
             border-color: #0d6efd;
         }
 
+        /* Info button styling */
+        .info-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background: #0d6efd;
+            color: white;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            border: none;
+            margin-left: 8px;
+            vertical-align: middle;
+            transition: background 0.2s;
+        }
+        .info-btn:hover {
+            background: #0b5ed7;
+        }
+        .trigger-label-container {
+            display: flex;
+            align-items: flex-start;
+        }
+        .trigger-label-text {
+            flex: 1;
+        }
+
         /* Entry container */
         .entries-container {
             display: none;
@@ -335,6 +364,23 @@
         <span id="toastMessage">Saved</span>
     </div>
 
+    <!-- Info Modal -->
+    <div class="modal fade" id="infoModal" tabindex="-1" aria-labelledby="infoModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="infoModalLabel">Information</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" id="infoModalBody">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Got it</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         // Show toast if there are Django messages
@@ -354,6 +400,16 @@
             setTimeout(() => {
                 toast.classList.remove('show');
             }, 2000);
+        }
+
+        function showInfoModal(subKey) {
+            const sub = config.subsections.find(s => s.key === subKey);
+            if (sub && sub.trigger && sub.trigger.info_text) {
+                document.getElementById('infoModalLabel').textContent = sub.name;
+                document.getElementById('infoModalBody').innerHTML = sub.trigger.info_text;
+                const modal = new bootstrap.Modal(document.getElementById('infoModal'));
+                modal.show();
+            }
         }
     </script>
     <script>
@@ -405,9 +461,16 @@
 
             // Trigger question
             if (sub.trigger) {
+                const infoBtn = sub.trigger.info_text
+                    ? `<button type="button" class="info-btn" onclick="showInfoModal('${sub.key}')" title="More information"><i class="bi bi-info"></i></button>`
+                    : '';
+
                 html += `
                     <div class="trigger-question">
-                        <label>${sub.trigger.label}</label>
+                        <div class="trigger-label-container">
+                            <label class="trigger-label-text">${sub.trigger.label}</label>
+                            ${infoBtn}
+                        </div>
                         ${sub.trigger.help_text ? `<small class="text-muted d-block mb-2">${sub.trigger.help_text}</small>` : ''}
                         <div class="trigger-options">
                             <div class="trigger-option">

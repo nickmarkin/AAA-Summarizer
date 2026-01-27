@@ -28,6 +28,18 @@ urlpatterns = [
     path('admin/invitations/<int:pk>/history/', views.invitation_history, name='invitation_history'),
 
     # ==========================================================================
+    # Survey Config Management
+    # ==========================================================================
+    path('admin/config/', views.config_manage, name='config_manage'),
+    path('admin/config/export/', views.config_export, name='config_export'),
+    path('admin/config/export/<int:pk>/', views.config_export, name='config_export_saved'),
+    path('admin/config/upload/', views.config_upload, name='config_upload'),
+    path('admin/config/preview/', views.config_preview, name='config_preview'),
+    path('admin/config/<int:pk>/activate/', views.config_activate, name='config_activate'),
+    path('admin/config/<int:pk>/deactivate/', views.config_deactivate, name='config_deactivate'),
+    path('admin/config/<int:pk>/delete/', views.config_delete, name='config_delete'),
+
+    # ==========================================================================
     # Faculty Survey Views - Token-based access
     # ==========================================================================
     path('s/<str:token>/', views.survey_landing, name='survey_landing'),

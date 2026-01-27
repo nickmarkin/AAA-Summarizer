@@ -6,21 +6,58 @@ This configuration mirrors the REDCap data dictionary structure with:
 - "Add another" pattern for repeating entries
 - Correction options for mistaken "No" answers
 - Opt-out choice for mistaken "Yes" answers
+
+POINT VALUES:
+Point values are pulled from the database (ActivityType table) via the
+points_mapping module. The Activity Points Config page is the single source
+of truth for both REDCap imports and the survey system.
+
+The POINT_VALUES dict below serves as fallback defaults if database
+lookup fails. Edit values via the Activity Points Config page, not here.
 """
 
-# Point values (from REDCap val_* fields)
-POINT_VALUES = {
-    # Citizenship
+from .points_mapping import get_all_point_values, DEFAULT_POINT_VALUES
+
+# Get point values from database, with fallback to defaults
+def _load_point_values():
+    """Load point values from database, falling back to defaults."""
+    try:
+        return get_all_point_values()
+    except Exception:
+        return DEFAULT_POINT_VALUES.copy()
+
+# POINT_VALUES is loaded dynamically from database
+# Edit via Activity Points Config page, not here
+POINT_VALUES = _load_point_values()
+
+# Legacy fallback values (used if database unavailable)
+_FALLBACK_POINT_VALUES = {
+    # Citizenship - Committees
     'cit_eval_80': 2000,
     'comm_unmc': 1000,
     'comm_nebmed': 500,
     'comm_minor': 100,
     'comm_other': 0,
+    # Short-form keys used in survey choices
+    'unmc': 1000,
+    'nebmed': 500,
+    'minor': 100,
+    'other': 0,
+
+    # Citizenship - Department Activities
     'dept_gr_host': 300,
     'dept_gr_attend': 50,
+    'dept_qa_attend': 50,
     'dept_jc_host': 300,
     'dept_jc_attend': 50,
     'dept_shadow': 50,
+    # Short-form keys used in survey choices
+    'gr_host': 300,
+    'gr_attend': 50,
+    'qa_attend': 50,
+    'jc_host': 300,
+    'jc_attend': 50,
+    'shadow': 50,
 
     # Education - Teaching Recognition
     'teacher_of_year': 7500,
@@ -33,6 +70,7 @@ POINT_VALUES = {
     'lecture_revised': 100,
     'lecture_existing': 50,
     'lecture_orals_mm': 75,
+    'sim_event_resfel': 100,
     'unmc_grand_rounds_presenter': 500,
     'com_core_new': 500,
     'com_core_revised': 250,
@@ -100,6 +138,9 @@ POINT_VALUES = {
     'pub_peer_coauth_per_if': 300,  # Per IF point
     'pub_nonpeer_first_senior': 500,
     'pub_nonpeer_coauth': 150,
+    # Short-form keys used in survey choices (peer-reviewed)
+    'first_senior': 1000,  # Per IF point for peer-reviewed
+    'coauth': 300,  # Per IF point for peer-reviewed
 
     # Content Expert - Pathways
     'pathway_new': 300,
@@ -142,6 +183,7 @@ CITIZENSHIP_CONFIG = {
                 'label': 'Are you serving on any committees this year (UNMC standing, Nebraska Medicine standing, or minor committees)?',
                 'type': 'yesno',
                 'help_text': 'Select Yes to enter details below',
+                'info_text': '<strong>UNMC Standing Committee:</strong> Major institutional committees such as Admissions, GME, Curriculum, Faculty Senate, IRB, etc.<br><br><strong>Nebraska Medicine Standing Committee:</strong> Medical Executive Committee (MEC), Medical Staff committees, credentialing committees.<br><br><strong>Minor/Ad Hoc Committee:</strong> Department committees, search committees, task forces, or other temporary committees.<br><br><em>Report once per academic year - this will carry forward to subsequent quarters.</em>',
             },
             'type': 'repeating',
             'add_another_label': 'Add another committee?',
@@ -152,10 +194,10 @@ CITIZENSHIP_CONFIG = {
                     'type': 'radio',
                     'required': True,
                     'choices': [
-                        ('unmc', 'UNMC standing committee (admissions, GME, curriculum, senate, IRB)', POINT_VALUES['comm_unmc']),
-                        ('nebmed', 'Nebraska Medicine standing committee (MEC/med staff)', POINT_VALUES['comm_nebmed']),
-                        ('minor', 'Minor or ad hoc committee', POINT_VALUES['comm_minor']),
-                        ('other', 'Other committee', POINT_VALUES['comm_other']),
+                        ('unmc', 'UNMC standing committee (admissions, GME, curriculum, senate, IRB)', POINT_VALUES['unmc']),
+                        ('nebmed', 'Nebraska Medicine standing committee (MEC/med staff)', POINT_VALUES['nebmed']),
+                        ('minor', 'Minor or ad hoc committee', POINT_VALUES['minor']),
+                        ('other', 'Other committee', POINT_VALUES['other']),
                     ],
                 },
                 {
@@ -180,6 +222,7 @@ CITIZENSHIP_CONFIG = {
                 'label': 'Did you participate in department citizenship activities this quarter (Grand Rounds attendance, QA attendance Journal Club attendance, or student shadowing)?',
                 'type': 'yesno',
                 'help_text': 'Select Yes to enter details below',
+                'info_text': '<strong>Grand Rounds Host:</strong> You introduced/hosted a Grand Rounds speaker.<br><br><strong>Grand Rounds Attendance:</strong> In-person attendance at departmental Grand Rounds.<br><br><strong>QA Meeting Attendance:</strong> In-person attendance at Quality Assurance meetings.<br><br><strong>Journal Club Host:</strong> You presented or led a Journal Club session.<br><br><strong>Journal Club Attendance:</strong> In-person attendance at department or division Journal Club.<br><br><strong>Student Shadowing:</strong> You mentored a student during a shadowing experience.',
             },
             'type': 'repeating',
             'add_another_label': 'Add another department activity?',
@@ -190,12 +233,12 @@ CITIZENSHIP_CONFIG = {
                     'type': 'radio',
                     'required': True,
                     'choices': [
-                        ('gr_host', 'Grand Rounds Host', POINT_VALUES['dept_gr_host']),
-                        ('gr_attend', 'Grand Rounds Attendance (in person)', POINT_VALUES['dept_gr_attend']),
-                        ('qa_attend', 'QA Meeting Attendance (in person)', POINT_VALUES['dept_gr_attend']),
-                        ('jc_host', 'Journal Club Host', POINT_VALUES['dept_jc_host']),
-                        ('jc_attend', 'Journal Club Attendance (in person; Dept or Division Level)', POINT_VALUES['dept_jc_attend']),
-                        ('shadow', 'Student Shadowing Mentor', POINT_VALUES['dept_shadow']),
+                        ('gr_host', 'Grand Rounds Host', POINT_VALUES['gr_host']),
+                        ('gr_attend', 'Grand Rounds Attendance (in person)', POINT_VALUES['gr_attend']),
+                        ('qa_attend', 'QA Meeting Attendance (in person)', POINT_VALUES['qa_attend']),
+                        ('jc_host', 'Journal Club Host', POINT_VALUES['jc_host']),
+                        ('jc_attend', 'Journal Club Attendance (in person; Dept or Division Level)', POINT_VALUES['jc_attend']),
+                        ('shadow', 'Student Shadowing Mentor', POINT_VALUES['shadow']),
                     ],
                 },
                 {
@@ -228,6 +271,7 @@ EDUCATION_CONFIG = {
                 'label': 'Did you give any lectures or contribute to curriculum this quarter?',
                 'type': 'yesno',
                 'help_text': 'Select Yes to enter details below',
+                'info_text': 'This includes formal didactic lectures to residents/fellows/students, simulation events, grand rounds presentations, and College of Medicine teaching. Count each unique lecture or session.',
             },
             'type': 'repeating',
             'add_another_label': 'Add another lecture?',
@@ -243,6 +287,7 @@ EDUCATION_CONFIG = {
                         ('lecture_revised', 'Revised Existing Lecture', POINT_VALUES['lecture_revised']),
                         ('lecture_existing', 'Existing Lecture (no revision)', POINT_VALUES['lecture_existing']),
                         ('lecture_orals_mm', 'Resident M&M and Practice Oral Boards Session', POINT_VALUES['lecture_orals_mm']),
+                        ('sim_event_resfel', 'Simulation Event (Resident/Fellow)', POINT_VALUES['sim_event_resfel']),
                         ('com_core_new', 'Core COM Faculty - New Lecture', POINT_VALUES['com_core_new']),
                         ('com_core_revised', 'Core COM Faculty - Revised Lecture', POINT_VALUES['com_core_revised']),
                         ('com_adhoc_new', 'Ad Hoc COM Faculty - New Lecture', POINT_VALUES['com_adhoc_new']),
@@ -271,6 +316,7 @@ EDUCATION_CONFIG = {
                 'label': 'Did you participate in board preparation activities this quarter (mock exams, OSCE, etc.)?',
                 'type': 'yesno',
                 'help_text': 'Select Yes to enter details below',
+                'info_text': '<strong>Mock Applied Exam Faculty:</strong> Served as faculty for a mock applied (BASIC/ADVANCED) exam session.<br><br><strong>New OSCE Preparation:</strong> Created a new OSCE scenario or video for board preparation.<br><br><strong>OSCE Reviewer:</strong> Reviewed OSCE videos for residents (count per 5 videos reviewed).<br><br><strong>Mock Oral Examiner:</strong> Served as an examiner for mock oral board sessions (count per session).',
             },
             'type': 'repeating',
             'add_another_label': 'Add another board prep activity?',
@@ -303,6 +349,7 @@ EDUCATION_CONFIG = {
                 'label': 'Did you mentor trainees on posters, abstracts, presentations, or publications this quarter?',
                 'type': 'yesno',
                 'help_text': 'Select Yes to enter details below',
+                'info_text': '<strong>Research Abstract Mentorship:</strong> Guided a trainee through abstract submission for a conference.<br><br><strong>Poster Presentation:</strong> Mentored a trainee on a poster for MARC, ASA, SCA, or other meeting.<br><br><strong>Presentation Mentoring:</strong> Helped a trainee prepare for an oral presentation.<br><br><strong>Publication Mentoring:</strong> Guided a trainee through the publication process.<br><br><strong>Resident Advisor:</strong> Served as a formal advisor to an assigned resident.',
             },
             'type': 'repeating',
             'add_another_label': 'Add another mentorship activity?',
@@ -358,6 +405,7 @@ EDUCATION_CONFIG = {
                 'label': 'Are you serving as a Rotation Director?',
                 'type': 'yesno',
                 'help_text': 'Select Yes to enter rotation details below',
+                'info_text': 'Rotation Directors are responsible for overseeing a specific clinical rotation for residents or fellows. This includes curriculum development, trainee evaluation, and rotation logistics.<br><br>List each rotation you direct separately.<br><br><em>Report once per academic year - this will carry forward to subsequent quarters.</em>',
             },
             'type': 'repeating',
             'add_another_label': 'Add another rotation?',
@@ -388,6 +436,7 @@ RESEARCH_CONFIG = {
                 'label': 'Did you participate in NIH study section grant review this quarter?',
                 'type': 'yesno',
                 'help_text': 'Select Yes to enter details below',
+                'info_text': '<strong>NIH Study Section - Standing:</strong> You are a regular member of an NIH study section.<br><br><strong>NIH Study Section - Ad Hoc:</strong> You served as an ad hoc reviewer for an NIH study section.<br><br><em>Report once per academic year - this will carry forward to subsequent quarters.</em>',
             },
             'type': 'repeating',
             'add_another_label': 'Add another grant review?',
@@ -424,6 +473,7 @@ RESEARCH_CONFIG = {
                 'label': 'Did you receive any grant awards this quarter?',
                 'type': 'yesno',
                 'help_text': 'Select Yes to enter details below',
+                'info_text': 'Report grants that were <strong>awarded</strong> (funded) this quarter. Select the tier based on direct costs:<br><br><strong>$100,000+:</strong> Major grants (R01, large foundation grants)<br><strong>$50,000-99,999:</strong> Mid-size grants<br><strong>$10,000-49,999:</strong> Smaller grants, pilot funding<br><strong>Under $10,000:</strong> Small grants, seed funding<br><br>If you are not the PI, indicate the PI name.',
             },
             'type': 'repeating',
             'add_another_label': 'Add another grant award?',
@@ -468,6 +518,7 @@ RESEARCH_CONFIG = {
                 'label': 'Did you submit any grants this quarter?',
                 'type': 'yesno',
                 'help_text': 'Select Yes to enter details below',
+                'info_text': 'Report grants <strong>submitted</strong> this quarter (regardless of outcome):<br><br><strong>Scored Submission:</strong> Your grant was reviewed and received a score.<br><strong>Not Scored:</strong> Your grant was reviewed but not scored (triaged/not discussed).<br><strong>Mentor on Submission:</strong> You served as a mentor on a trainee\'s grant submission.',
             },
             'type': 'repeating',
             'add_another_label': 'Add another grant submission?',
@@ -512,6 +563,7 @@ RESEARCH_CONFIG = {
                 'label': 'Are you serving on any thesis or dissertation committees?',
                 'type': 'yesno',
                 'help_text': 'Select Yes to enter details below',
+                'info_text': 'Report your service on graduate student thesis or dissertation committees. This includes PhD, MS, and other graduate degree committees where you serve as a member or advisor.<br><br><em>Report once per academic year - this will carry forward to subsequent quarters.</em>',
             },
             'type': 'repeating',
             'add_another_label': 'Add another committee?',
@@ -553,6 +605,7 @@ LEADERSHIP_CONFIG = {
                 'label': 'Did you hold any education leadership roles this quarter (course director, workshop director, moderator, etc.)?',
                 'type': 'yesno',
                 'help_text': 'Select Yes to enter details below',
+                'info_text': '<strong>Course Director (National/International):</strong> Directed a course at a national or international meeting (ASA, SCA, etc.).<br><br><strong>UNMC Course Director:</strong> Directed a course at UNMC.<br><br><strong>Guideline Writing Lead:</strong> Led the development of clinical guidelines.<br><br><strong>Workshop Director:</strong> Directed a hands-on workshop or skills session.<br><br><strong>Panel Moderator:</strong> Moderated a panel discussion at a meeting.<br><br><strong>UNMC Moderator:</strong> Moderated a session at UNMC.',
             },
             'type': 'repeating',
             'add_another_label': 'Add another leadership role?',
@@ -594,6 +647,7 @@ LEADERSHIP_CONFIG = {
                 'label': 'Do you hold any society leadership positions (BOD, RRC, committee chair/member)?',
                 'type': 'yesno',
                 'help_text': 'Select Yes to enter details below',
+                'info_text': '<strong>Society BOD Member:</strong> Serve on the Board of Directors of a professional society (ASA, SCA, SOAP, etc.).<br><br><strong>Society RRC Member:</strong> Serve on the Residency Review Committee.<br><br><strong>Major Board Committee Chair:</strong> Chair a major committee of a professional society.<br><br><strong>Major Board Committee Member:</strong> Serve as a member of a major society committee.<br><br><em>Report once per academic year - this will carry forward to subsequent quarters.</em>',
             },
             'type': 'repeating',
             'add_another_label': 'Add another society role?',
@@ -627,6 +681,7 @@ LEADERSHIP_CONFIG = {
                 'label': 'Do you hold any board examination leadership roles (editor, examiner, question writer)?',
                 'type': 'yesno',
                 'help_text': 'Select Yes to enter details below',
+                'info_text': '<strong>Boards Editor:</strong> Serve as an editor for ABA or subspecialty board examinations.<br><br><strong>Writing Committee Chair:</strong> Chair a question-writing committee for board exams.<br><br><strong>Board Examiner:</strong> Serve as an oral board examiner.<br><br><strong>Question Writer:</strong> Write questions for board examinations.<br><br><em>Report once per academic year - this will carry forward to subsequent quarters.</em>',
             },
             'type': 'repeating',
             'add_another_label': 'Add another board role?',
@@ -667,6 +722,7 @@ CONTENT_EXPERT_CONFIG = {
                 'label': 'Did you give any invited lectures or workshops this quarter (outside of regular UNMC teaching)?',
                 'type': 'yesno',
                 'help_text': 'Select Yes to enter details below',
+                'info_text': 'Report <strong>invited</strong> speaking engagements outside of your regular UNMC teaching duties:<br><br><strong>International/National Lecture:</strong> Invited lecture at a national or international meeting.<br><strong>Visiting Professor Grand Rounds:</strong> Invited as a visiting professor to give Grand Rounds elsewhere.<br><strong>Non-Anesthesiology UNMC Grand Rounds:</strong> Invited to present at another UNMC department\'s Grand Rounds.<br><strong>Regional/UNMC Lecture:</strong> Invited lecture at a regional meeting or UNMC event.<br><strong>Workshops:</strong> Hands-on workshops at national or regional meetings.',
             },
             'type': 'repeating',
             'add_another_label': 'Add another speaking engagement?',
@@ -719,6 +775,7 @@ CONTENT_EXPERT_CONFIG = {
                 'label': 'Did you publish any peer-reviewed articles this quarter?',
                 'type': 'yesno',
                 'help_text': 'Select Yes to enter details below',
+                'info_text': 'Report peer-reviewed publications that were <strong>published</strong> (not just accepted) this quarter.<br><br>Points are calculated based on your role and the journal\'s Impact Factor (IF):<br><br><strong>First/Senior Author:</strong> 1,000 points × IF (max 15)<br><strong>Co-author:</strong> 300 points × IF (max 15)<br><br>Enter the journal\'s Impact Factor (capped at 15 for calculation purposes).',
             },
             'type': 'repeating',
             'add_another_label': 'Add another publication?',
@@ -774,6 +831,7 @@ CONTENT_EXPERT_CONFIG = {
                 'label': 'Did you publish any non-peer-reviewed articles this quarter (newsletters, trade publications, etc.)?',
                 'type': 'yesno',
                 'help_text': 'Select Yes to enter details below',
+                'info_text': 'Report non-peer-reviewed publications such as:<br><br>• Newsletter articles<br>• Trade publication articles<br>• Blog posts for professional organizations<br>• Society bulletins<br>• Online educational content<br><br><strong>First/Senior Author:</strong> 500 points<br><strong>Co-author:</strong> 150 points',
             },
             'type': 'repeating',
             'add_another_label': 'Add another publication?',
@@ -817,6 +875,7 @@ CONTENT_EXPERT_CONFIG = {
                 'label': 'Did you create or revise any clinical pathways this year?',
                 'type': 'yesno',
                 'help_text': 'Select Yes to enter details below',
+                'info_text': 'Clinical pathways are standardized care protocols for specific clinical situations.<br><br><strong>New Clinical Pathway:</strong> Created a new pathway from scratch.<br><strong>Revised Clinical Pathway:</strong> Made significant updates to an existing pathway.<br><br><em>Report once per academic year - this will carry forward to subsequent quarters.</em>',
             },
             'type': 'repeating',
             'add_another_label': 'Add another pathway?',
@@ -853,6 +912,7 @@ CONTENT_EXPERT_CONFIG = {
                 'label': 'Did you contribute to any textbooks this quarter (editor, chapter author)?',
                 'type': 'yesno',
                 'help_text': 'Select Yes to enter details below',
+                'info_text': '<strong>Major textbooks:</strong> Widely-used reference texts (Miller\'s Anesthesia, Barash, etc.)<br><strong>Minor textbooks:</strong> Subspecialty or less widely-used texts<br><br><strong>Roles:</strong><br>• Senior Editor - Overall editor of the textbook<br>• Section Editor - Editor of a section within the book<br>• Chapter First/Senior Author - Primary author of a chapter<br>• Chapter Co-author - Contributing author on a chapter',
             },
             'type': 'repeating',
             'add_another_label': 'Add another textbook contribution?',
@@ -895,6 +955,7 @@ CONTENT_EXPERT_CONFIG = {
                 'label': 'Did you present any research abstracts/posters this quarter?',
                 'type': 'yesno',
                 'help_text': 'Select Yes to enter details below',
+                'info_text': 'Report abstracts/posters <strong>presented</strong> at meetings this quarter (MARC, ASA, SCA, etc.):<br><br><strong>First or Senior Author:</strong> You are the presenting author or senior/corresponding author.<br><strong>2nd Author with Trainee as 1st:</strong> A trainee is first author and you are second (mentorship credit).<br><strong>Co-author:</strong> You are a contributing author but not first, second, or senior.',
             },
             'type': 'repeating',
             'add_another_label': 'Add another abstract?',
@@ -945,6 +1006,7 @@ CONTENT_EXPERT_CONFIG = {
                 'label': 'Do you hold any journal editorial positions?',
                 'type': 'yesno',
                 'help_text': 'Select Yes to enter details below',
+                'info_text': '<strong>Editor-in-Chief:</strong> Chief editor of a peer-reviewed journal.<br><strong>Section Editor:</strong> Editor of a specific section within a journal.<br><strong>Special Edition Editor:</strong> Guest editor for a special issue/supplement.<br><strong>Editorial Board Member:</strong> Serve on the editorial board.<br><strong>Ad Hoc Reviewer:</strong> Regular reviewer (4+ reviews/year for the same journal).<br><br><em>Report once per academic year - this will carry forward to subsequent quarters.</em>',
             },
             'type': 'repeating',
             'add_another_label': 'Add another editorial role?',
@@ -995,9 +1057,34 @@ CATEGORY_NAMES = {
 }
 
 
+def get_active_survey_config():
+    """
+    Get the active survey configuration.
+
+    Returns database override if active, otherwise returns default config.
+    """
+    try:
+        from .models import SurveyConfigOverride
+        override = SurveyConfigOverride.get_active_config()
+        if override and override.config_json:
+            return override.config_json
+    except Exception:
+        pass  # Fall back to default if any error
+
+    # Return default config
+    return {
+        'point_values': POINT_VALUES,
+        'categories': SURVEY_CATEGORIES,
+        'category_order': CATEGORY_ORDER,
+        'category_names': CATEGORY_NAMES,
+    }
+
+
 def get_category_config(category_key):
     """Get configuration for a specific category."""
-    return SURVEY_CATEGORIES.get(category_key)
+    config = get_active_survey_config()
+    categories = config.get('categories', SURVEY_CATEGORIES)
+    return categories.get(category_key)
 
 
 def calculate_subsection_points(subsection_config, subsection_data):

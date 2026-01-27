@@ -425,3 +425,50 @@ class SurveyResponseHistory(models.Model):
             ip_address=ip_address,
             user_agent=user_agent,
         )
+
+
+class SurveyConfigOverride(models.Model):
+    """
+    Stores custom survey configuration as JSON.
+
+    When present and is_active=True, this overrides the default
+    survey_config.py settings. Allows admins to modify survey
+    questions and point values without code deployment.
+    """
+    name = models.CharField(
+        max_length=100,
+        default='Custom Configuration',
+        help_text='Name for this configuration'
+    )
+    config_json = models.JSONField(
+        help_text='Complete survey configuration as JSON'
+    )
+    is_active = models.BooleanField(
+        default=False,
+        help_text='If true, this config overrides the default'
+    )
+
+    # Audit fields
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    created_by = models.CharField(max_length=100, blank=True)
+
+    class Meta:
+        ordering = ['-updated_at']
+        verbose_name = 'Survey Config Override'
+        verbose_name_plural = 'Survey Config Overrides'
+
+    def __str__(self):
+        status = '(Active)' if self.is_active else '(Inactive)'
+        return f"{self.name} {status}"
+
+    def save(self, *args, **kwargs):
+        # If this is being set to active, deactivate all others
+        if self.is_active:
+            SurveyConfigOverride.objects.exclude(pk=self.pk).update(is_active=False)
+        super().save(*args, **kwargs)
+
+    @classmethod
+    def get_active_config(cls):
+        """Get the active config override, or None if using default."""
+        return cls.objects.filter(is_active=True).first()
