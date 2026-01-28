@@ -38,6 +38,8 @@ urlpatterns = [
     path('admin/config/<int:pk>/activate/', views.config_activate, name='config_activate'),
     path('admin/config/<int:pk>/deactivate/', views.config_deactivate, name='config_deactivate'),
     path('admin/config/<int:pk>/delete/', views.config_delete, name='config_delete'),
+    path('admin/config/copy/', views.config_copy_to_year, name='config_copy_to_year'),
+    path('admin/config/year/<int:year_id>/', views.config_edit_year, name='config_edit_year'),
 
     # ==========================================================================
     # Faculty Survey Views - Token-based access

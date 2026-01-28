@@ -1856,13 +1856,22 @@ def _merge_response_to_faculty_data(response):
 
 def config_manage(request):
     """Manage survey configuration overrides."""
+    from reports_app.models import AcademicYear
     from .survey_config import POINT_VALUES, SURVEY_CATEGORIES, CATEGORY_ORDER, CATEGORY_NAMES
 
-    # Get all config overrides
-    configs = SurveyConfigOverride.objects.all()
+    # Get all academic years with their configs
+    years = AcademicYear.objects.all().order_by('-year_code')
+    year_configs = []
+    for year in years:
+        config = SurveyConfigOverride.objects.filter(academic_year=year).first()
+        year_configs.append({
+            'year': year,
+            'config': config,
+            'has_config': config is not None,
+        })
 
-    # Get the active config for display
-    active_config = SurveyConfigOverride.get_active_config()
+    # Get orphaned configs (no academic year - legacy)
+    orphan_configs = SurveyConfigOverride.objects.filter(academic_year__isnull=True)
 
     # Current default config summary
     default_config = {
@@ -1873,10 +1882,9 @@ def config_manage(request):
     }
 
     context = {
-        'configs': configs,
-        'active_config': active_config,
+        'year_configs': year_configs,
+        'orphan_configs': orphan_configs,
         'default_config': default_config,
-        'using_default': active_config is None,
     }
     return render(request, 'survey/admin/config_manage.html', context)
 
@@ -2043,3 +2051,94 @@ def config_delete(request, pk):
     config.delete()
     messages.success(request, f'Configuration "{name}" deleted.')
     return redirect('survey:config_manage')
+
+
+def config_copy_to_year(request):
+    """Copy survey config from one academic year to another."""
+    from reports_app.models import AcademicYear
+    from .survey_config import get_default_config
+
+    # Get all academic years
+    years = AcademicYear.objects.all().order_by('-year_code')
+
+    # Get years that have configs
+    years_with_configs = set(
+        SurveyConfigOverride.objects.filter(
+            academic_year__isnull=False
+        ).values_list('academic_year_id', flat=True)
+    )
+
+    if request.method == 'POST':
+        source_year_id = request.POST.get('source_year')
+        target_year_id = request.POST.get('target_year')
+
+        if not target_year_id:
+            messages.error(request, 'Please select a target year.')
+            return redirect('survey:config_copy_to_year')
+
+        target_year = get_object_or_404(AcademicYear, pk=target_year_id)
+
+        # Check if target already has a config
+        existing = SurveyConfigOverride.objects.filter(academic_year=target_year).first()
+        if existing and 'confirm_overwrite' not in request.POST:
+            # Ask for confirmation
+            context = {
+                'years': years,
+                'years_with_configs': years_with_configs,
+                'confirm_overwrite': True,
+                'target_year': target_year,
+                'existing_config': existing,
+                'source_year_id': source_year_id,
+            }
+            return render(request, 'survey/admin/config_copy.html', context)
+
+        # Get source year (None means use default)
+        source_year = None
+        if source_year_id and source_year_id != 'default':
+            source_year = get_object_or_404(AcademicYear, pk=source_year_id)
+
+        # Perform the copy
+        new_config = SurveyConfigOverride.copy_to_new_year(
+            source_year=source_year,
+            target_year=target_year,
+            created_by=request.user.username if request.user.is_authenticated else ''
+        )
+
+        if source_year:
+            messages.success(
+                request,
+                f'Survey config copied from AY {source_year.year_code} to AY {target_year.year_code}.'
+            )
+        else:
+            messages.success(
+                request,
+                f'Default survey config copied to AY {target_year.year_code}.'
+            )
+
+        return redirect('survey:config_manage')
+
+    context = {
+        'years': years,
+        'years_with_configs': years_with_configs,
+    }
+    return render(request, 'survey/admin/config_copy.html', context)
+
+
+def config_edit_year(request, year_id):
+    """Edit the survey config for a specific academic year."""
+    from reports_app.models import AcademicYear
+    from .survey_config import get_survey_config_for_year
+
+    year = get_object_or_404(AcademicYear, pk=year_id)
+    config_override = SurveyConfigOverride.objects.filter(academic_year=year).first()
+
+    # Get the effective config for this year
+    config = get_survey_config_for_year(year)
+
+    context = {
+        'year': year,
+        'config_override': config_override,
+        'config': config,
+        'has_custom_config': config_override is not None,
+    }
+    return render(request, 'survey/admin/config_edit_year.html', context)

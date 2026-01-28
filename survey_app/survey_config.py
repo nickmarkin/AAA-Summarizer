@@ -1057,10 +1057,44 @@ CATEGORY_NAMES = {
 }
 
 
+def get_default_config():
+    """Get the default survey configuration from this file."""
+    return {
+        'point_values': POINT_VALUES,
+        'categories': SURVEY_CATEGORIES,
+        'category_order': CATEGORY_ORDER,
+        'category_names': CATEGORY_NAMES,
+    }
+
+
+def get_survey_config_for_year(academic_year=None):
+    """
+    Get survey configuration for a specific academic year.
+
+    Args:
+        academic_year: AcademicYear model instance, or None for default
+
+    Returns:
+        Config dict with point_values, categories, category_order, category_names
+    """
+    if academic_year is not None:
+        try:
+            from .models import SurveyConfigOverride
+            override = SurveyConfigOverride.get_config_for_year(academic_year)
+            if override and override.config_json:
+                return override.config_json
+        except Exception:
+            pass  # Fall back to default if any error
+
+    # Return default config
+    return get_default_config()
+
+
 def get_active_survey_config():
     """
-    Get the active survey configuration.
+    Get the active survey configuration (legacy - no year context).
 
+    Deprecated: Use get_survey_config_for_year() with academic year instead.
     Returns database override if active, otherwise returns default config.
     """
     try:
@@ -1071,18 +1105,12 @@ def get_active_survey_config():
     except Exception:
         pass  # Fall back to default if any error
 
-    # Return default config
-    return {
-        'point_values': POINT_VALUES,
-        'categories': SURVEY_CATEGORIES,
-        'category_order': CATEGORY_ORDER,
-        'category_names': CATEGORY_NAMES,
-    }
+    return get_default_config()
 
 
-def get_category_config(category_key):
+def get_category_config(category_key, academic_year=None):
     """Get configuration for a specific category."""
-    config = get_active_survey_config()
+    config = get_survey_config_for_year(academic_year)
     categories = config.get('categories', SURVEY_CATEGORIES)
     return categories.get(category_key)
 

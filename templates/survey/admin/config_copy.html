@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+
+{% block title %}Copy Survey Config to New Year{% endblock %}
+
+{% block page_title %}Copy Survey Config to New Year{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <p class="text-muted mb-0">Copy an existing survey configuration to a new academic year</p>
+    <a href="{% url 'survey:config_manage' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Back to Config Management
+    </a>
+</div>
+
+{% if confirm_overwrite %}
+<!-- Confirmation Dialog -->
+<div class="card border-warning">
+    <div class="card-header bg-warning-subtle">
+        <h5 class="mb-0"><i class="bi bi-exclamation-triangle"></i> Confirm Overwrite</h5>
+    </div>
+    <div class="card-body">
+        <p>
+            <strong>AY {{ target_year.year_code }}</strong> already has a custom configuration:
+            <em>{{ existing_config.name }}</em>
+        </p>
+        <p>Do you want to overwrite it?</p>
+
+        <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="source_year" value="{{ source_year_id }}">
+            <input type="hidden" name="target_year" value="{{ target_year.pk }}">
+            <input type="hidden" name="confirm_overwrite" value="yes">
+
+            <button type="submit" class="btn btn-warning">
+                <i class="bi bi-check-lg"></i> Yes, Overwrite
+            </button>
+            <a href="{% url 'survey:config_copy_to_year' %}" class="btn btn-outline-secondary">
+                Cancel
+            </a>
+        </form>
+    </div>
+</div>
+
+{% else %}
+<!-- Copy Form -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0">Select Source and Target Year</h5>
+    </div>
+    <div class="card-body">
+        <form method="post">
+            {% csrf_token %}
+
+            <div class="row mb-4">
+                <div class="col-md-5">
+                    <label for="source_year" class="form-label">Copy From (Source)</label>
+                    <select name="source_year" id="source_year" class="form-select">
+                        <option value="default">Default Configuration (survey_config.py)</option>
+                        {% for year in years %}
+                        <option value="{{ year.pk }}" {% if year.pk in years_with_configs %}class="fw-bold"{% endif %}>
+                            AY {{ year.year_code }}
+                            {% if year.pk in years_with_configs %}
+                            (has custom config)
+                            {% endif %}
+                        </option>
+                        {% endfor %}
+                    </select>
+                    <div class="form-text">Select which configuration to copy</div>
+                </div>
+
+                <div class="col-md-2 d-flex align-items-center justify-content-center">
+                    <i class="bi bi-arrow-right fs-2 text-muted"></i>
+                </div>
+
+                <div class="col-md-5">
+                    <label for="target_year" class="form-label">Copy To (Target Year)</label>
+                    <select name="target_year" id="target_year" class="form-select" required>
+                        <option value="">-- Select target year --</option>
+                        {% for year in years %}
+                        <option value="{{ year.pk }}">
+                            AY {{ year.year_code }}
+                            {% if year.pk in years_with_configs %}
+                            (will overwrite existing)
+                            {% endif %}
+                        </option>
+                        {% endfor %}
+                    </select>
+                    <div class="form-text">This year will get its own copy of the config</div>
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary">
+                <i class="bi bi-copy"></i> Copy Configuration
+            </button>
+        </form>
+    </div>
+</div>
+
+<!-- Info -->
+<div class="card mt-4">
+    <div class="card-header">
+        <h5 class="mb-0">What This Does</h5>
+    </div>
+    <div class="card-body">
+        <ul class="mb-0">
+            <li>Creates a <strong>separate copy</strong> of the survey configuration for the target year.</li>
+            <li>The copied config is independent - changes to one year won't affect others.</li>
+            <li>All quarters (Q1-Q4) within the target year will use the new config.</li>
+            <li>If the source year has no custom config, the default from <code>survey_config.py</code> will be copied.</li>
+        </ul>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

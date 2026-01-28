@@ -429,23 +429,31 @@ class SurveyResponseHistory(models.Model):
 
 class SurveyConfigOverride(models.Model):
     """
-    Stores custom survey configuration as JSON.
+    Stores survey configuration as JSON for a specific academic year.
 
-    When present and is_active=True, this overrides the default
-    survey_config.py settings. Allows admins to modify survey
-    questions and point values without code deployment.
+    Each academic year can have its own survey configuration. This allows
+    changes to the survey structure/questions without affecting previous years.
+    If no config exists for a year, the default survey_config.py is used.
     """
     name = models.CharField(
         max_length=100,
         default='Custom Configuration',
-        help_text='Name for this configuration'
+        help_text='Name for this configuration (e.g., "AY 25-26 Survey Config")'
+    )
+    academic_year = models.OneToOneField(
+        AcademicYear,
+        on_delete=models.CASCADE,
+        related_name='survey_config',
+        null=True,
+        blank=True,
+        help_text='The academic year this config applies to'
     )
     config_json = models.JSONField(
         help_text='Complete survey configuration as JSON'
     )
     is_active = models.BooleanField(
-        default=False,
-        help_text='If true, this config overrides the default'
+        default=True,
+        help_text='If false, this config is ignored and default is used'
     )
 
     # Audit fields
@@ -454,21 +462,76 @@ class SurveyConfigOverride(models.Model):
     created_by = models.CharField(max_length=100, blank=True)
 
     class Meta:
-        ordering = ['-updated_at']
-        verbose_name = 'Survey Config Override'
-        verbose_name_plural = 'Survey Config Overrides'
+        ordering = ['-academic_year__year_code', '-updated_at']
+        verbose_name = 'Survey Config'
+        verbose_name_plural = 'Survey Configs'
 
     def __str__(self):
-        status = '(Active)' if self.is_active else '(Inactive)'
-        return f"{self.name} {status}"
-
-    def save(self, *args, **kwargs):
-        # If this is being set to active, deactivate all others
-        if self.is_active:
-            SurveyConfigOverride.objects.exclude(pk=self.pk).update(is_active=False)
-        super().save(*args, **kwargs)
+        year_str = self.academic_year.year_code if self.academic_year else 'No Year'
+        status = '' if self.is_active else ' (Inactive)'
+        return f"{self.name} - {year_str}{status}"
 
     @classmethod
+    def get_config_for_year(cls, academic_year):
+        """Get the config for a specific academic year, or None if using default."""
+        if academic_year is None:
+            return None
+        return cls.objects.filter(
+            academic_year=academic_year,
+            is_active=True
+        ).first()
+
+    @classmethod
+    def copy_to_new_year(cls, source_year, target_year, created_by=''):
+        """
+        Copy survey config from one academic year to another.
+
+        Args:
+            source_year: AcademicYear to copy from
+            target_year: AcademicYear to copy to
+            created_by: Username for audit
+
+        Returns:
+            The new SurveyConfigOverride, or None if source has no config
+        """
+        source_config = cls.get_config_for_year(source_year)
+
+        if source_config is None:
+            # No custom config for source year - create one from defaults
+            from .survey_config import (
+                POINT_VALUES, SURVEY_CATEGORIES, CATEGORY_ORDER, CATEGORY_NAMES
+            )
+            config_json = {
+                'point_values': POINT_VALUES,
+                'categories': SURVEY_CATEGORIES,
+                'category_order': CATEGORY_ORDER,
+                'category_names': CATEGORY_NAMES,
+            }
+        else:
+            # Copy the existing config JSON
+            config_json = source_config.config_json.copy()
+
+        # Check if target already has a config
+        existing = cls.objects.filter(academic_year=target_year).first()
+        if existing:
+            # Update existing config
+            existing.config_json = config_json
+            existing.is_active = True
+            existing.created_by = created_by
+            existing.save()
+            return existing
+
+        # Create new config for target year
+        return cls.objects.create(
+            name=f"AY {target_year.year_code} Survey Config",
+            academic_year=target_year,
+            config_json=config_json,
+            is_active=True,
+            created_by=created_by,
+        )
+
+    # Keep for backwards compatibility
+    @classmethod
     def get_active_config(cls):
-        """Get the active config override, or None if using default."""
+        """Legacy method - get any active config override."""
         return cls.objects.filter(is_active=True).first()

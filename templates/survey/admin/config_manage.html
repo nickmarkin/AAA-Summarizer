@@ -6,53 +6,103 @@
 
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <p class="text-muted mb-0">Manage survey questions and point values without code deployment</p>
-    <a href="{% url 'survey:campaign_list' %}" class="btn btn-outline-secondary">
-        <i class="bi bi-arrow-left"></i> Back to Campaigns
-    </a>
+    <p class="text-muted mb-0">Each academic year has its own survey configuration</p>
+    <div>
+        <a href="{% url 'survey:config_copy_to_year' %}" class="btn btn-primary">
+            <i class="bi bi-copy"></i> Copy Config to New Year
+        </a>
+        <a href="{% url 'survey:campaign_list' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Back to Campaigns
+        </a>
+    </div>
 </div>
 
-<!-- Current Status -->
+<!-- Configs by Academic Year -->
 <div class="card mb-4">
     <div class="card-header">
-        <h5 class="mb-0">Current Configuration</h5>
+        <h5 class="mb-0">Survey Configurations by Academic Year</h5>
+    </div>
+    <table class="table table-hover mb-0">
+        <thead>
+            <tr>
+                <th>Academic Year</th>
+                <th>Configuration</th>
+                <th>Last Updated</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in year_configs %}
+            <tr>
+                <td>
+                    <strong>AY {{ item.year.year_code }}</strong>
+                    <br><small class="text-muted">{{ item.year.start_date|date:"M Y" }} - {{ item.year.end_date|date:"M Y" }}</small>
+                </td>
+                <td>
+                    {% if item.has_config %}
+                    <span class="badge bg-success">Custom Config</span>
+                    <br><small>{{ item.config.name }}</small>
+                    {% else %}
+                    <span class="badge bg-secondary">Using Default</span>
+                    <br><small class="text-muted">From survey_config.py</small>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if item.has_config %}
+                    {{ item.config.updated_at|date:"M j, Y" }}
+                    {% else %}
+                    <span class="text-muted">-</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if item.has_config %}
+                    <a href="{% url 'survey:config_export_saved' pk=item.config.pk %}"
+                       class="btn btn-sm btn-outline-primary" title="Download">
+                        <i class="bi bi-download"></i>
+                    </a>
+                    <form method="post" action="{% url 'survey:config_delete' pk=item.config.pk %}" class="d-inline"
+                          onsubmit="return confirm('Delete this configuration? The year will revert to using the default.');">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </form>
+                    {% else %}
+                    <a href="{% url 'survey:config_export' %}" class="btn btn-sm btn-outline-secondary" title="Download Default">
+                        <i class="bi bi-download"></i>
+                    </a>
+                    {% endif %}
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="4" class="text-center text-muted">No academic years found</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Default Config Info -->
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Default Configuration</h5>
+        <a href="{% url 'survey:config_export' %}" class="btn btn-sm btn-outline-primary">
+            <i class="bi bi-download"></i> Download Default
+        </a>
     </div>
     <div class="card-body">
-        {% if using_default %}
-        <div class="d-flex align-items-center">
-            <span class="badge bg-info me-2">Default</span>
-            <span>Using built-in configuration from <code>survey_config.py</code></span>
-        </div>
-        <div class="mt-3">
-            <a href="{% url 'survey:config_export' %}" class="btn btn-outline-primary">
-                <i class="bi bi-download"></i> Download Default Config
-            </a>
-        </div>
-        {% else %}
-        <div class="d-flex align-items-center">
-            <span class="badge bg-success me-2">Custom</span>
-            <span>Using: <strong>{{ active_config.name }}</strong></span>
-            <span class="text-muted ms-2">(uploaded {{ active_config.updated_at|date:"M j, Y" }})</span>
-        </div>
-        <div class="mt-3">
-            <a href="{% url 'survey:config_export_saved' pk=active_config.pk %}" class="btn btn-outline-primary">
-                <i class="bi bi-download"></i> Download Active Config
-            </a>
-            <form method="post" action="{% url 'survey:config_deactivate' pk=active_config.pk %}" class="d-inline">
-                {% csrf_token %}
-                <button type="submit" class="btn btn-outline-warning">
-                    <i class="bi bi-arrow-counterclockwise"></i> Revert to Default
-                </button>
-            </form>
-        </div>
-        {% endif %}
+        <p class="text-muted mb-0">
+            Years without a custom configuration use the default from <code>survey_config.py</code>.
+            To create a custom config for a year, use <strong>Copy Config to New Year</strong>.
+        </p>
     </div>
 </div>
 
 <!-- Upload New Config -->
 <div class="card mb-4">
     <div class="card-header">
-        <h5 class="mb-0">Upload New Configuration</h5>
+        <h5 class="mb-0">Upload Configuration</h5>
     </div>
     <div class="card-body">
         <form method="post" action="{% url 'survey:config_upload' %}" enctype="multipart/form-data">
@@ -63,7 +113,7 @@
                     <label for="config_file" class="form-label">Select JSON configuration file</label>
                     <input type="file" name="config_file" id="config_file" class="form-control" accept=".json">
                     <div class="form-text">
-                        Download the current configuration, edit it, and upload the modified file.
+                        Download a configuration, edit it, and upload the modified file.
                     </div>
                 </div>
                 <div class="col-md-4">
@@ -76,11 +126,11 @@
     </div>
 </div>
 
-<!-- Saved Configurations -->
-{% if configs %}
-<div class="card">
-    <div class="card-header">
-        <h5 class="mb-0">Saved Configurations</h5>
+<!-- Legacy/Orphan Configs -->
+{% if orphan_configs %}
+<div class="card mb-4">
+    <div class="card-header bg-warning-subtle">
+        <h5 class="mb-0">Legacy Configurations (No Year Assigned)</h5>
     </div>
     <table class="table table-hover mb-0">
         <thead>
@@ -92,7 +142,7 @@
             </tr>
         </thead>
         <tbody>
-            {% for config in configs %}
+            {% for config in orphan_configs %}
             <tr>
                 <td>
                     <strong>{{ config.name }}</strong>
@@ -113,23 +163,6 @@
                        class="btn btn-sm btn-outline-primary" title="Download">
                         <i class="bi bi-download"></i>
                     </a>
-
-                    {% if config.is_active %}
-                    <form method="post" action="{% url 'survey:config_deactivate' pk=config.pk %}" class="d-inline">
-                        {% csrf_token %}
-                        <button type="submit" class="btn btn-sm btn-outline-warning" title="Deactivate">
-                            <i class="bi bi-toggle-on"></i>
-                        </button>
-                    </form>
-                    {% else %}
-                    <form method="post" action="{% url 'survey:config_activate' pk=config.pk %}" class="d-inline">
-                        {% csrf_token %}
-                        <button type="submit" class="btn btn-sm btn-outline-success" title="Activate">
-                            <i class="bi bi-toggle-off"></i>
-                        </button>
-                    </form>
-                    {% endif %}
-
                     <form method="post" action="{% url 'survey:config_delete' pk=config.pk %}" class="d-inline"
                           onsubmit="return confirm('Delete this configuration?');">
                         {% csrf_token %}
@@ -142,37 +175,25 @@
             {% endfor %}
         </tbody>
     </table>
+    <div class="card-footer">
+        <small class="text-muted">These configurations were created before year-based configs were implemented. You can delete them or assign them to a year via the Django admin.</small>
+    </div>
 </div>
 {% endif %}
 
 <!-- Help Section -->
 <div class="card mt-4">
     <div class="card-header">
-        <h5 class="mb-0">Configuration Format</h5>
+        <h5 class="mb-0">How Year-Based Configs Work</h5>
     </div>
     <div class="card-body">
-        <p>The configuration JSON file should contain the following structure:</p>
-        <pre class="bg-light p-3 rounded"><code>{
-  "point_values": {
-    "activity_type_key": 5,
-    "another_activity": 10
-  },
-  "categories": {
-    "citizenship": {
-      "name": "Citizenship",
-      "subsections": [...]
-    }
-  },
-  "category_order": ["citizenship", "education", ...],
-  "category_names": {
-    "citizenship": "Citizenship",
-    "education": "Education"
-  }
-}</code></pre>
-        <p class="text-muted mb-0">
-            <i class="bi bi-lightbulb"></i>
-            Tip: Download the current configuration first to see the exact format and make modifications from there.
-        </p>
+        <ul class="mb-0">
+            <li><strong>Each academic year</strong> can have its own survey configuration.</li>
+            <li>All campaigns (Q1, Q2, Q3, Q4) within the same year share the same config.</li>
+            <li>Changes to a year's config affect all quarters in that year.</li>
+            <li>To set up a new year, use <strong>Copy Config to New Year</strong> to duplicate from a previous year or the default.</li>
+            <li>Years without a custom config use the default from <code>survey_config.py</code>.</li>
+        </ul>
     </div>
 </div>
 {% endblock %}
