@@ -16,6 +16,7 @@ A comprehensive faculty achievement tracking system for the UNMC Department of A
 - **Customizable Templates** - Edit email subject and body per campaign
 - **Progress Tracking** - See who has submitted, in progress, or not started
 - **Recipient Selection** - Choose specific faculty for emails
+- **Year-Based Configuration** - Each academic year has its own survey config
 
 ### Division Dashboards
 - **Division Chief View** - Chiefs see only their division's faculty
@@ -122,6 +123,26 @@ sudo apt-get install libpango-1.0-0 libpangocairo-1.0-0
 - CCC membership
 
 **Total Points** = Survey Points + Departmental Points
+
+## Survey Configuration
+
+### Year-Based Configs
+Each academic year can have its own survey configuration:
+- All quarters (Q1-Q4) within a year share the same config
+- Changes to one year don't affect other years
+- Use "Copy Config to New Year" to duplicate configs
+- Years without custom config use the default from `survey_config.py`
+
+### Activity Points
+Point values are managed via the Activity Points Config page:
+- Single source of truth for both REDCap imports and surveys
+- Edit point values without code deployment
+- Changes take effect immediately for the configured year
+
+### Info Buttons
+Survey questions include info buttons that explain each activity type:
+- Click the (i) icon next to any question for details
+- Descriptions help faculty understand what qualifies
 
 ## Configuration
 

@@ -40,6 +40,7 @@ Division Dashboard / Reports / CSV Export
 - `SurveyCampaign` - Survey period with dates, email templates
 - `SurveyInvitation` - Individual invitation with unique token
 - `SurveyResponse` - Faculty responses (draft or submitted)
+- `SurveyConfigOverride` - Year-specific survey configuration (JSON)
 - `EmailLog` - Audit trail for sent emails
 
 ## File Structure
@@ -85,8 +86,10 @@ Access at http://127.0.0.1:8000
 - `/` - Home dashboard
 - `/roster/` - Faculty roster management
 - `/survey/admin/campaigns/` - Survey campaign management
+- `/survey/admin/config/` - Survey configuration management
 - `/divisions/` - Division dashboard list
 - `/import/` - REDCap CSV import
+- `/admin/` - Django admin (for deleting test campaigns, etc.)
 
 **Faculty:**
 - `/my/<token>/` - Faculty portal (token-based access)
@@ -97,6 +100,34 @@ Access at http://127.0.0.1:8000
 python manage.py makemigrations
 python manage.py migrate
 ```
+
+## Survey Configuration System
+
+### Year-Based Configs
+Each academic year can have its own survey configuration stored in `SurveyConfigOverride`:
+- Links to `AcademicYear` via OneToOne relationship
+- Stores complete config as JSON (categories, subsections, point values)
+- All Q1-Q4 campaigns in a year share the same config
+- Years without custom config use defaults from `survey_config.py`
+
+### Key Files
+- `survey_app/survey_config.py` - Default config and helper functions
+- `survey_app/points_mapping.py` - Maps survey keys to ActivityType.data_variable
+- `survey_app/models.py` - `SurveyConfigOverride` model
+
+### Config Functions
+```python
+get_survey_config_for_year(academic_year)  # Get config for specific year
+get_default_config()                        # Get default from survey_config.py
+SurveyConfigOverride.copy_to_new_year(source, target)  # Copy config between years
+```
+
+### Points System
+Point values can come from two sources:
+1. **Database** (ActivityType table) - Single source of truth
+2. **Fallback defaults** in `points_mapping.py` - Used if DB lookup fails
+
+The `points_mapping.py` maps survey keys (e.g., `'comm_unmc'`) to database variables (e.g., `'CIT_COMMIT_UNMC'`).
 
 ## Survey System
 
@@ -122,6 +153,13 @@ Each campaign has customizable:
 3. **Research** - Grant review, awards, submissions, thesis committees
 4. **Leadership** - Education, society, board leadership
 5. **Content Expert** - Speaking, publications, pathways, textbooks, abstracts, editorial
+
+### Info Buttons
+Each survey subsection trigger has an `info_text` field that displays in a popup:
+- Explains what qualifies for each activity type
+- Shows in both faculty and demo survey templates
+- Edit via `survey_config.py` (trigger → info_text field)
+- Point values intentionally NOT shown to avoid gaming
 
 ## Points Calculation
 
