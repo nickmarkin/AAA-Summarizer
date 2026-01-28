@@ -206,31 +206,110 @@ The application sends emails for:
 - Survey invitations (initial)
 - Survey reminders (follow-up)
 
+### What IT Needs to Provide
+
+Contact your IT department and request:
+
+1. **SMTP server hostname** (e.g., `smtp.unmc.edu` or `smtp.office365.com`)
+2. **SMTP port** (typically 587 for TLS, 25 for non-TLS)
+3. **Authentication credentials**:
+   - Service account email address
+   - Password or app-specific password
+4. **Sender address** that's authorized to send from this server
+5. **Server IP whitelisting** (if required by mail server)
+
 ### SMTP Setup
 
-Contact your IT department for SMTP credentials. Common configurations:
+Common configurations:
 
-**Microsoft 365:**
+**Microsoft 365 / Office 365:**
 ```bash
 EMAIL_HOST=smtp.office365.com
 EMAIL_PORT=587
 EMAIL_USE_TLS=True
+EMAIL_HOST_USER=service-account@unmc.edu
+EMAIL_HOST_PASSWORD=your-password-or-app-password
+DEFAULT_FROM_EMAIL=service-account@unmc.edu
 ```
+Note: Microsoft 365 often requires the FROM address to match the authenticated user.
 
 **On-premises Exchange:**
 ```bash
 EMAIL_HOST=mail.unmc.edu
 EMAIL_PORT=25
 EMAIL_USE_TLS=False
+EMAIL_HOST_USER=           # May not be required for internal relay
+EMAIL_HOST_PASSWORD=       # May not be required for internal relay
+DEFAULT_FROM_EMAIL=noreply@unmc.edu
 ```
+Note: Internal Exchange servers may allow unauthenticated relay from whitelisted IPs.
 
-### Testing Email
+**Gmail (for testing only):**
+```bash
+EMAIL_HOST=smtp.gmail.com
+EMAIL_PORT=587
+EMAIL_USE_TLS=True
+EMAIL_HOST_USER=your-gmail@gmail.com
+EMAIL_HOST_PASSWORD=your-app-specific-password
+```
+Note: Requires app-specific password (not regular password) with 2FA enabled.
+
+### Testing Email (Without SMTP)
+
+To test email functionality without a working SMTP server, use the file-based backend:
 
 ```bash
-python manage.py shell
->>> from django.core.mail import send_mail
->>> send_mail('Test', 'Test body', 'from@unmc.edu', ['your@email.com'])
+# In .env
+EMAIL_BACKEND=django.core.mail.backends.filebased.EmailBackend
+EMAIL_FILE_PATH=/opt/academic-achievement/sent_emails
 ```
+
+Emails will be written to files in the `sent_emails/` directory instead of being sent. You can review them to verify content and formatting.
+
+### Testing Email (With SMTP)
+
+Once SMTP is configured, test from Django shell:
+
+```bash
+source venv/bin/activate
+python manage.py shell
+```
+
+```python
+from django.core.mail import send_mail
+send_mail(
+    'Test Subject',
+    'Test body text',
+    'from-address@unmc.edu',
+    ['your-email@unmc.edu'],
+    fail_silently=False
+)
+```
+
+If successful, you should receive the test email. If it fails, you'll see the error message.
+
+### Mail Merge Fallback (If SMTP Unavailable)
+
+If server-based email isn't working, you can use Outlook mail merge from a PC:
+
+1. Go to **Survey Campaigns** → select campaign → **Export**
+2. Download **Mail Merge CSV** (contains faculty names, emails, survey links)
+3. Download **Mail Merge Word Template** (pre-formatted invitation letter)
+4. Open the Word template in Microsoft Word
+5. Use **Mailings** → **Start Mail Merge** → **Use Existing List** → select the CSV
+6. **Finish & Merge** → **Send Email Messages**
+
+This sends personalized emails through your Outlook account instead of the server.
+
+### Common Email Issues
+
+| Issue | Likely Cause | Solution |
+|-------|--------------|----------|
+| Connection refused | Wrong host/port | Verify SMTP settings with IT |
+| Authentication failed | Wrong credentials | Check username/password, may need app-specific password |
+| Relay access denied | Server not whitelisted | Ask IT to whitelist server IP |
+| Timeout | Firewall blocking | Check port 587/25 is open outbound |
+| FROM address rejected | Unauthorized sender | Use the authenticated account as FROM |
 
 ## Security Considerations
 
@@ -294,9 +373,12 @@ sudo journalctl -u academic-achievement -f
 ### Emails Not Sending
 
 1. Check EMAIL_BACKEND is set to smtp (not filebased)
-2. Verify SMTP credentials with IT
-3. Check email logs: `EmailLog.objects.all()` in Django shell
-4. Test with Django shell (see Testing Email above)
+2. Verify SMTP credentials with IT (see Email Configuration section)
+3. Test SMTP connection from Django shell (see Testing Email above)
+4. Check email logs: `EmailLog.objects.all()` in Django shell
+5. Check server can reach SMTP port: `telnet smtp.unmc.edu 587`
+6. Review common issues table in Email Configuration section
+7. **Fallback**: Use mail merge export if server email isn't working
 
 ### Survey Links Not Working
 
