@@ -1,0 +1,46 @@
+# Changelog
+
+All notable changes to the Academic Achievement Award Summarizer.
+
+Version format: `MAJOR.MINOR.DAY_OF_YEAR` (e.g., v1.2.30 = version 1.2, updated on day 30 of the year)
+
+---
+
+## v1.2.30 - 2026-01-30
+
+### Added
+- Version display in sidebar footer showing `YEAR vX.X.XX (build HASH)`
+- Database now tracked in git for easier deployment
+
+### Changed
+- REDCap data import updated with latest faculty data (Brakke)
+
+### Technical
+- Added `VERSION` file for manual version tracking
+- Added `get_app_version()` context processor for version display
+- Removed `db.sqlite3` from `.gitignore`
+
+---
+
+## v1.1 - 2026-01 (Prior releases)
+
+### Features
+- Year-based survey configuration system
+- Email setup documentation for IT
+- Survey info text entries
+- Division verification workflow
+- Faculty portal with personal links
+- Campaign management with email templates
+- REDCap CSV import
+- Reports and CSV export
+
+---
+
+## v1.0 - Initial Release
+
+### Features
+- Faculty roster management
+- Survey campaigns (Q1-Q4)
+- Point calculation system
+- Division dashboards
+- Basic reporting

@@ -91,6 +91,8 @@ The app displays a version number in the sidebar footer: `2025 v1.2.30 (build a3
 - Mar 1 = day 60 (or 61 in leap year)
 - Run `date +%j` in terminal to get today's day of year
 
+**Version history:** See `CHANGELOG.md` for all releases
+
 ## Common Tasks
 
 ### Running the Dev Server

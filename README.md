@@ -2,6 +2,10 @@
 
 A comprehensive faculty achievement tracking system for the UNMC Department of Anesthesiology. Faculty complete quarterly surveys online, and administrators manage campaigns, track progress, and generate reports.
 
+**Current Version:** See sidebar footer in app (format: `2026 v1.2.30 (build abc1234)`)
+
+**Changelog:** See [CHANGELOG.md](CHANGELOG.md) for version history.
+
 ## Features
 
 ### Survey System
@@ -201,6 +205,8 @@ AAA Summarizer/
 ├── requirements.txt        # Python dependencies
 ├── manage.py               # Django management
 ├── DEPLOYMENT.md           # IT deployment guide
+├── CHANGELOG.md            # Version history
+├── VERSION                 # Current version number
 └── README.md               # This file
 ```
 
