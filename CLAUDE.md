@@ -70,6 +70,27 @@ AAA Summarizer/
 └── CLAUDE.md               # This file
 ```
 
+## Versioning
+
+The app displays a version number in the sidebar footer: `2025 v1.2.30 (build a3f8b2c)`
+
+**Format:** `YEAR vMAJOR.MINOR.DAY_OF_YEAR (build HASH)`
+- **Year** - Auto-generated from current year
+- **Major/Minor** - Manually controlled, bump for significant changes
+- **Day of Year** - Day you made the update (Jan 30 = 30, Feb 15 = 46, etc.)
+- **Build hash** - Auto-generated from git commit
+
+**To update the version:**
+1. Edit the `VERSION` file in the project root
+2. Change to new version (e.g., `1.2.30` for a v1.2 update on day 30)
+3. Commit your changes - the git hash updates automatically
+
+**Day of year reference:**
+- Jan 30 = day 30
+- Feb 15 = day 46
+- Mar 1 = day 60 (or 61 in leap year)
+- Run `date +%j` in terminal to get today's day of year
+
 ## Common Tasks
 
 ### Running the Dev Server
