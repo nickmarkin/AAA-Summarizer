@@ -6,6 +6,26 @@ Version format: `MAJOR.MINOR.DAY_OF_YEAR` (e.g., v1.2.30 = version 1.2, updated 
 
 ---
 
+## v1.2.50 - 2026-02-19
+
+### Security
+- DEBUG now defaults to `False` (was `True`) for production safety
+- SECRET_KEY no longer has a hardcoded fallback; app fails with helpful error if not set
+- Production security headers (HSTS, secure cookies, SSL redirect) auto-enabled when DEBUG=False
+- Fixed open redirect vulnerability in academic year selector
+- SurveyConfigOverride enforces single active config per academic year via save() override
+
+### Fixed
+- Simulation Event (Resident/Fellow) point value corrected from 100 to 150 (matching database)
+- Removed stale "needs to be added to DB" comments in points_mapping.py for QA attendance
+
+### Changed
+- Access control delegated to department IT (server/network level); Django login not enforced
+- Updated CLAUDE.md with deployment notes, security docs, and dev server instructions
+- Updated file structure documentation
+
+---
+
 ## v1.2.30 - 2026-01-30
 
 ### Added

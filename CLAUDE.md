@@ -49,13 +49,15 @@ Division Dashboard / Reports / CSV Export
 AAA Summarizer/
 ├── src/                    # Legacy CLI library (still works)
 ├── webapp/                 # Django project settings
+│   └── settings.py         # All config (DB, email, security, etc.)
 ├── reports_app/            # Reports, roster, import, dashboards
 │   ├── models.py           # FacultyMember, FacultySurveyData, etc.
 │   └── views.py            # All report and admin views
 ├── survey_app/             # Survey system
 │   ├── models.py           # Campaign, Invitation, Response
 │   ├── views.py            # Survey and campaign views
-│   └── survey_config.py    # Activity definitions and point values
+│   ├── survey_config.py    # Activity definitions and point values
+│   └── points_mapping.py   # Maps survey keys to ActivityType.data_variable
 ├── templates/
 │   ├── base.html           # Main layout with sidebar
 │   ├── reports/            # Report templates
@@ -67,6 +69,12 @@ AAA Summarizer/
 ├── venv/                   # Python virtual environment
 ├── requirements.txt
 ├── manage.py
+├── VERSION                 # Version number (MAJOR.MINOR.DAY_OF_YEAR)
+├── CHANGELOG.md            # Release history
+├── DEPLOYMENT.md           # Full IT deployment guide
+├── Dockerfile              # Docker container definition
+├── docker-compose.yml      # Docker compose config
+├── .env.example            # Environment variable template
 └── CLAUDE.md               # This file
 ```
 
@@ -99,9 +107,12 @@ The app displays a version number in the sidebar footer: `2025 v1.2.30 (build a3
 ```bash
 cd "/Users/nmarkin/Library/CloudStorage/Dropbox/Claude Code Projects/AAA Summarizer"
 source venv/bin/activate
-python manage.py runserver
+DEBUG=True python manage.py runserver
 ```
 Access at http://127.0.0.1:8000
+
+**Important:** `DEBUG=True` is required for local development. Without it, the app
+will fail to start (SECRET_KEY not set). You can also add `DEBUG=True` to a `.env` file.
 
 ### Key URLs
 
@@ -211,12 +222,28 @@ Division chiefs can:
 ## Environment Variables
 
 Key settings in `.env`:
-- `SECRET_KEY` - Django secret key
-- `DEBUG` - True/False
-- `ALLOWED_HOSTS` - Server hostnames
-- `SITE_URL` - Full URL for email links
+- `SECRET_KEY` - Django secret key (**required in production**, app crashes without it)
+- `DEBUG` - Defaults to `False`. Set to `True` for local development
+- `ALLOWED_HOSTS` - Server hostnames (comma-separated)
+- `SITE_URL` - Full URL for email links (e.g., `https://aaa.unmc.edu`)
 - `EMAIL_BACKEND` - smtp or filebased
-- `EMAIL_HOST`, `EMAIL_PORT`, etc. - SMTP settings
+- `EMAIL_HOST`, `EMAIL_PORT`, etc. - SMTP settings (defaults to `mail.unmc.edu:25`)
+
+Generate a secret key with:
+```bash
+python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
+```
+
+## Security & Access Control
+
+- **Production security headers** (HSTS, secure cookies, SSL redirect) are automatically
+  enabled when `DEBUG=False`
+- **Access control** is handled by department IT at the server/network level
+  (Shibboleth, firewall, VPN, etc.) — Django does not enforce login
+- **Faculty access** is token-based: each faculty member has a unique portal URL
+  (`/my/<token>/`) sent via email. No login required.
+- `SurveyConfigOverride.save()` enforces only one active config per academic year
+- `select_year()` validates redirect URLs to prevent open redirect attacks
 
 ## User Preferences
 
