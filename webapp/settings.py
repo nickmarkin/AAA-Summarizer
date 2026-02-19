@@ -22,10 +22,21 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # SECURITY WARNING: keep the secret key used in production secret!
 # In production, set SECRET_KEY environment variable
-SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-t0qb@smrs3woz83$eed+_m(r%^86!45z7%s^*s1=$^+%w_c4lg')
+_secret_key = os.environ.get('SECRET_KEY', '')
+if not _secret_key:
+    # Allow insecure key ONLY in development when DEBUG is explicitly enabled
+    _debug_env = os.environ.get('DEBUG', 'False').lower()
+    if _debug_env in ('true', '1', 'yes'):
+        _secret_key = 'django-insecure-dev-only-key-do-not-use-in-production'
+    else:
+        raise RuntimeError(
+            'SECRET_KEY environment variable is required. '
+            'Generate one with: python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"'
+        )
+SECRET_KEY = _secret_key
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get('DEBUG', 'True').lower() in ('true', '1', 'yes')
+DEBUG = os.environ.get('DEBUG', 'False').lower() in ('true', '1', 'yes')
 
 # In production, set ALLOWED_HOSTS environment variable (comma-separated)
 ALLOWED_HOSTS = [h.strip() for h in os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',') if h.strip()]
@@ -235,3 +246,27 @@ SURVEY_EMAIL_SUBJECT_PREFIX = os.environ.get(
 
 # Site URL for email links (defaults to localhost for development)
 SITE_URL = os.environ.get('SITE_URL', 'http://localhost:8001')
+
+
+# =============================================================================
+# AUTHENTICATION
+# =============================================================================
+
+LOGIN_URL = '/admin/login/'
+LOGIN_REDIRECT_URL = '/'
+
+
+# =============================================================================
+# PRODUCTION SECURITY SETTINGS
+# =============================================================================
+# These are automatically enabled when DEBUG=False
+
+if not DEBUG:
+    SECURE_SSL_REDIRECT = os.environ.get('SECURE_SSL_REDIRECT', 'True').lower() in ('true', '1', 'yes')
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_HSTS_SECONDS = 31536000
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+    SECURE_BROWSER_XSS_FILTER = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True

@@ -471,6 +471,19 @@ class SurveyConfigOverride(models.Model):
         status = '' if self.is_active else ' (Inactive)'
         return f"{self.name} - {year_str}{status}"
 
+    def save(self, *args, **kwargs):
+        """When activating a config, deactivate other configs for the same year."""
+        if self.is_active and self.academic_year_id:
+            # Deactivate other active configs for this academic year
+            qs = SurveyConfigOverride.objects.filter(
+                academic_year=self.academic_year,
+                is_active=True,
+            )
+            if self.pk:
+                qs = qs.exclude(pk=self.pk)
+            qs.update(is_active=False)
+        super().save(*args, **kwargs)
+
     @classmethod
     def get_config_for_year(cls, academic_year):
         """Get the config for a specific academic year, or None if using default."""

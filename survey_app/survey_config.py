@@ -70,7 +70,7 @@ _FALLBACK_POINT_VALUES = {
     'lecture_revised': 100,
     'lecture_existing': 50,
     'lecture_orals_mm': 75,
-    'sim_event_resfel': 100,
+    'sim_event_resfel': 150,
     'unmc_grand_rounds_presenter': 500,
     'com_core_new': 500,
     'com_core_revised': 250,

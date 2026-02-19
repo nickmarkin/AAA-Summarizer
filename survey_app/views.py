@@ -9,6 +9,7 @@ from django.http import JsonResponse, Http404, HttpResponse
 from django.utils import timezone
 from django.db import transaction
 from django.views.decorators.http import require_POST, require_GET
+from django.contrib.auth.decorators import login_required
 
 from reports_app.models import AcademicYear, FacultyMember
 from .models import SurveyCampaign, SurveyInvitation, SurveyResponse, EmailLog, SurveyConfigOverride
@@ -23,6 +24,7 @@ from .survey_config import (
 # ADMIN VIEWS - Campaign Management
 # =============================================================================
 
+@login_required
 def campaign_list(request):
     """List all survey campaigns with status and statistics."""
     campaigns = SurveyCampaign.objects.select_related('academic_year').all()
@@ -37,6 +39,7 @@ def campaign_list(request):
     return render(request, 'survey/admin/campaign_list.html', context)
 
 
+@login_required
 def campaign_create(request):
     """Create a new survey campaign."""
     if request.method == 'POST':
@@ -111,6 +114,7 @@ def campaign_create(request):
     return render(request, 'survey/admin/campaign_create.html', context)
 
 
+@login_required
 def campaign_detail(request, pk):
     """View campaign details, invitations, and statistics."""
     campaign = get_object_or_404(
@@ -143,6 +147,7 @@ def campaign_detail(request, pk):
     return render(request, 'survey/admin/campaign_detail.html', context)
 
 
+@login_required
 def campaign_edit(request, pk):
     """Edit campaign settings."""
     campaign = get_object_or_404(SurveyCampaign, pk=pk)
@@ -174,6 +179,7 @@ def campaign_edit(request, pk):
     return render(request, 'survey/admin/campaign_edit.html', context)
 
 
+@login_required
 @require_POST
 def campaign_update_faculty(request, pk):
     """Update which faculty are included in a campaign."""
@@ -236,6 +242,7 @@ def campaign_update_faculty(request, pk):
     return redirect('survey:campaign_detail', pk=pk)
 
 
+@login_required
 @require_POST
 def campaign_sync_from_import(request, pk):
     """
@@ -299,6 +306,7 @@ def campaign_sync_from_import(request, pk):
     return redirect('survey:campaign_detail', pk=pk)
 
 
+@login_required
 def campaign_send_email(request, pk):
     """Send email page - select recipients and message type."""
     from django.conf import settings
@@ -375,6 +383,7 @@ def campaign_send_email(request, pk):
     return render(request, 'survey/admin/campaign_send_email.html', context)
 
 
+@login_required
 def campaign_send_invitations(request, pk):
     """Send invitation emails to all pending faculty or a single faculty."""
     campaign = get_object_or_404(SurveyCampaign, pk=pk)
@@ -425,6 +434,7 @@ def campaign_send_invitations(request, pk):
     return redirect('survey:campaign_detail', pk=pk)
 
 
+@login_required
 def campaign_send_reminders(request, pk):
     """Send reminder emails to non-submitted faculty."""
     campaign = get_object_or_404(SurveyCampaign, pk=pk)
@@ -451,6 +461,7 @@ def campaign_send_reminders(request, pk):
     return redirect('survey:campaign_detail', pk=pk)
 
 
+@login_required
 @require_POST
 def invitation_unlock(request, pk):
     """Unlock a submitted survey to allow editing."""
@@ -481,6 +492,7 @@ def invitation_unlock(request, pk):
     return redirect('survey:campaign_detail', pk=invitation.campaign.pk)
 
 
+@login_required
 def invitation_history(request, pk):
     """View edit history for a survey invitation."""
     from .models import SurveyResponseHistory
@@ -501,6 +513,7 @@ def invitation_history(request, pk):
     return render(request, 'survey/admin/invitation_history.html', context)
 
 
+@login_required
 def campaign_export_csv(request, pk):
     """Export campaign survey responses to CSV with labels."""
     import csv
@@ -599,6 +612,7 @@ def campaign_export_csv(request, pk):
     return response
 
 
+@login_required
 def campaign_export_mailmerge_csv(request, pk):
     """Export faculty list with portal links for Outlook mail merge."""
     import csv
@@ -653,6 +667,7 @@ def campaign_export_mailmerge_csv(request, pk):
     return response
 
 
+@login_required
 def campaign_export_mailmerge_word(request, pk):
     """Export email template as Word document with mail merge fields."""
     from docx import Document
@@ -1854,6 +1869,7 @@ def _merge_response_to_faculty_data(response):
 # SURVEY CONFIG MANAGEMENT - JSON export/import
 # =============================================================================
 
+@login_required
 def config_manage(request):
     """Manage survey configuration overrides."""
     from reports_app.models import AcademicYear
@@ -1889,6 +1905,7 @@ def config_manage(request):
     return render(request, 'survey/admin/config_manage.html', context)
 
 
+@login_required
 @require_GET
 def config_export(request, pk=None):
     """Export survey configuration as JSON file."""
@@ -1918,6 +1935,7 @@ def config_export(request, pk=None):
     return response
 
 
+@login_required
 def config_upload(request):
     """Upload and preview a new survey configuration JSON."""
     import json
@@ -1990,6 +2008,7 @@ def config_upload(request):
     return redirect('survey:config_manage')
 
 
+@login_required
 def config_preview(request):
     """Preview pending configuration before saving."""
     from .survey_config import POINT_VALUES, SURVEY_CATEGORIES, CATEGORY_ORDER, CATEGORY_NAMES
@@ -2017,6 +2036,7 @@ def config_preview(request):
     return render(request, 'survey/admin/config_preview.html', context)
 
 
+@login_required
 @require_POST
 def config_activate(request, pk):
     """Activate a configuration override."""
@@ -2028,6 +2048,7 @@ def config_activate(request, pk):
     return redirect('survey:config_manage')
 
 
+@login_required
 @require_POST
 def config_deactivate(request, pk):
     """Deactivate a configuration (revert to default)."""
@@ -2039,6 +2060,7 @@ def config_deactivate(request, pk):
     return redirect('survey:config_manage')
 
 
+@login_required
 @require_POST
 def config_delete(request, pk):
     """Delete a configuration override."""
@@ -2053,6 +2075,7 @@ def config_delete(request, pk):
     return redirect('survey:config_manage')
 
 
+@login_required
 def config_copy_to_year(request):
     """Copy survey config from one academic year to another."""
     from reports_app.models import AcademicYear
@@ -2124,6 +2147,7 @@ def config_copy_to_year(request):
     return render(request, 'survey/admin/config_copy.html', context)
 
 
+@login_required
 def config_edit_year(request, year_id):
     """Edit the survey config for a specific academic year."""
     from reports_app.models import AcademicYear

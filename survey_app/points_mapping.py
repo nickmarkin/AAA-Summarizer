@@ -25,13 +25,13 @@ SURVEY_TO_DB_MAPPING = {
     # === Citizenship - Department Activities ===
     'dept_gr_host': 'CIT_DEPT_GR_HOST',
     'dept_gr_attend': 'CIT_DEPT_GR_ATTEND',
-    'dept_qa_attend': 'CIT_DEPT_QA_ATTEND',  # New - needs to be added to DB
+    'dept_qa_attend': 'CIT_DEPT_QA_ATTEND',
     'dept_jc_host': 'CIT_DEPT_JC_HOST',
     'dept_jc_attend': 'CIT_DEPT_JC_ATTEND',
     'dept_shadow': 'CIT_DEPT_SHDW_HOST',
     'gr_host': 'CIT_DEPT_GR_HOST',
     'gr_attend': 'CIT_DEPT_GR_ATTEND',
-    'qa_attend': 'CIT_DEPT_QA_ATTEND',  # New - needs to be added to DB
+    'qa_attend': 'CIT_DEPT_QA_ATTEND',
     'jc_host': 'CIT_DEPT_JC_HOST',
     'jc_attend': 'CIT_DEPT_JC_ATTEND',
     'shadow': 'CIT_DEPT_SHDW_HOST',
