@@ -12,7 +12,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.http import HttpResponse, JsonResponse
 from django.contrib import messages
 from django.views.decorators.http import require_http_methods, require_POST
-from django.contrib.auth.decorators import login_required
+
 from django.db import transaction
 
 from src import parser, reports, pdf_generator
@@ -60,7 +60,7 @@ def make_faculty_filename(display_name, suffix="Summary"):
     return f"{safe_name}_AVC_{academic_year}_{suffix}"
 
 
-@login_required
+
 def index(request):
     """Home page - dashboard with data overview."""
     if request.method == 'GET' and 'clear' in request.GET:
@@ -124,7 +124,7 @@ def index(request):
     })
 
 
-@login_required
+
 @require_POST
 def toggle_review_mode(request):
     """Toggle review mode for the current academic year."""
@@ -140,7 +140,7 @@ def toggle_review_mode(request):
     return redirect('index')
 
 
-@login_required
+
 @require_http_methods(["POST"])
 def upload_csv(request):
     """Handle CSV file upload."""
@@ -182,7 +182,7 @@ def upload_csv(request):
         return redirect('index')
 
 
-@login_required
+
 def select_export(request):
     """Select export type."""
     if 'faculty_data' not in request.session:
@@ -193,7 +193,7 @@ def select_export(request):
     return render(request, 'select_export.html', {'summary': summary})
 
 
-@login_required
+
 def export_points(request):
     """Export points summary as CSV."""
     if 'faculty_data' not in request.session:
@@ -208,7 +208,7 @@ def export_points(request):
     return response
 
 
-@login_required
+
 def select_faculty(request):
     """Select faculty members to export."""
     if 'faculty_data' not in request.session:
@@ -221,7 +221,7 @@ def select_faculty(request):
     return render(request, 'select_faculty.html', {'faculty_list': faculty_list})
 
 
-@login_required
+
 @require_http_methods(["POST"])
 def export_faculty(request):
     """Export selected faculty summaries."""
@@ -320,7 +320,7 @@ def export_faculty(request):
         return redirect('select_faculty')
 
 
-@login_required
+
 def select_activities(request):
     """Select activity types to export."""
     if 'faculty_data' not in request.session:
@@ -340,7 +340,7 @@ def select_activities(request):
     return render(request, 'select_activities.html', {'categories': categories})
 
 
-@login_required
+
 @require_http_methods(["POST"])
 def export_activities(request):
     """Export selected activity reports."""
@@ -393,7 +393,7 @@ def export_activities(request):
 # ACADEMIC YEAR MANAGEMENT
 # =============================================================================
 
-@login_required
+
 def academic_year_list(request):
     """List all academic years."""
     years = AcademicYear.objects.all()
@@ -404,7 +404,7 @@ def academic_year_list(request):
     })
 
 
-@login_required
+
 @require_POST
 def set_current_year(request):
     """Set the current academic year."""
@@ -420,7 +420,7 @@ def set_current_year(request):
     return redirect('year_list')
 
 
-@login_required
+
 def select_year(request):
     """Select the academic year to view (stored in session)."""
     year_code = request.GET.get('year') or request.POST.get('year_code')
@@ -440,7 +440,7 @@ def select_year(request):
     return redirect(parsed.path or '/')
 
 
-@login_required
+
 def create_year(request):
     """Create a new academic year."""
     from datetime import date
@@ -508,7 +508,7 @@ def create_year(request):
 # FACULTY ROSTER MANAGEMENT
 # =============================================================================
 
-@login_required
+
 def faculty_roster(request):
     """Display faculty roster with filters."""
     faculty = FacultyMember.objects.filter(is_active=True)
@@ -577,7 +577,7 @@ def faculty_roster(request):
     })
 
 
-@login_required
+
 def import_roster(request):
     """Import faculty roster from CSV."""
     if request.method == 'POST':
@@ -614,7 +614,7 @@ def import_roster(request):
     return render(request, 'roster/import.html')
 
 
-@login_required
+
 def faculty_summary(request):
     """
     Faculty Summary view - high-level overview of all faculty points.
@@ -719,7 +719,7 @@ def faculty_summary(request):
     })
 
 
-@login_required
+
 def faculty_detail(request, email):
     """View faculty member details with full activity breakdown."""
     from src.config import ACTIVITY_CATEGORIES, ACTIVITY_DISPLAY_NAMES
@@ -822,7 +822,7 @@ def faculty_detail(request, email):
     })
 
 
-@login_required
+
 def faculty_edit(request, email):
     """Edit faculty member."""
     from .models import Division
@@ -861,7 +861,7 @@ def faculty_edit(request, email):
     })
 
 
-@login_required
+
 def faculty_add(request):
     """Add a new faculty member."""
     from .models import Division
@@ -907,7 +907,7 @@ def faculty_add(request):
     })
 
 
-@login_required
+
 @require_POST
 def toggle_ccc(request, email):
     """Toggle CCC membership for a faculty member (AJAX)."""
@@ -933,7 +933,7 @@ def toggle_ccc(request, email):
 # SURVEY IMPORT WITH ROSTER MATCHING
 # =============================================================================
 
-@login_required
+
 def import_survey(request):
     """Upload survey CSV for import to database."""
     from survey_app.models import SurveyCampaign
@@ -1007,7 +1007,7 @@ def import_survey(request):
     })
 
 
-@login_required
+
 def import_review(request):
     """Review parsed data and roster matching."""
     from survey_app.models import SurveyCampaign
@@ -1227,7 +1227,7 @@ def _convert_activities_to_survey_format(activities):
     return result
 
 
-@login_required
+
 @require_POST
 def import_confirm(request):
     """Confirm and save import to database."""
@@ -1397,7 +1397,7 @@ def import_confirm(request):
     return redirect('faculty_summary')
 
 
-@login_required
+
 def import_history(request):
     """View import history."""
     imports = SurveyImport.objects.select_related('academic_year').all()[:50]
@@ -1408,7 +1408,7 @@ def import_history(request):
 # DEPARTMENTAL DATA ENTRY
 # =============================================================================
 
-@login_required
+
 def departmental_data(request, year_code=None):
     """Departmental data entry form."""
     if year_code:
@@ -1442,7 +1442,7 @@ def departmental_data(request, year_code=None):
     })
 
 
-@login_required
+
 @require_POST
 def departmental_update(request):
     """Update departmental data (AJAX)."""
@@ -1498,7 +1498,7 @@ def departmental_update(request):
 # DATABASE-BACKED REPORTS
 # =============================================================================
 
-@login_required
+
 def reports_dashboard(request):
     """Reports dashboard."""
     current_year = AcademicYear.get_current()
@@ -1516,7 +1516,7 @@ def reports_dashboard(request):
     })
 
 
-@login_required
+
 def db_export_points(request):
     """Export points summary from database."""
     year_code = request.GET.get('year', '')
@@ -1563,7 +1563,7 @@ def db_export_points(request):
     return response
 
 
-@login_required
+
 def db_select_faculty(request):
     """Select faculty for export from database."""
     year_code = request.GET.get('year', '')
@@ -1607,7 +1607,7 @@ def db_select_faculty(request):
     })
 
 
-@login_required
+
 @require_POST
 def db_export_faculty(request):
     """Export faculty summaries from database."""
@@ -1747,7 +1747,7 @@ def db_export_faculty(request):
         return redirect('db_select_faculty')
 
 
-@login_required
+
 def db_select_activities(request):
     """Select activity types to export from database."""
     year_code = request.GET.get('year', '')
@@ -1805,7 +1805,7 @@ def db_select_activities(request):
     })
 
 
-@login_required
+
 @require_POST
 def db_export_activities(request):
     """Export selected activity reports from database."""
@@ -1904,7 +1904,7 @@ def get_combined_activities(survey_data):
     return combined
 
 
-@login_required
+
 def activity_category_list(request):
     """Show all activity categories with counts."""
     from src.config import ACTIVITY_CATEGORIES
@@ -1964,7 +1964,7 @@ def activity_category_list(request):
     })
 
 
-@login_required
+
 def activity_type_list(request, category):
     """Show subcategories within a category."""
     from src.config import ACTIVITY_CATEGORIES, ACTIVITY_DISPLAY_NAMES
@@ -2042,7 +2042,7 @@ def activity_type_list(request, category):
     })
 
 
-@login_required
+
 def activity_role_list(request, category, subcategory):
     """Show roles/types within a subcategory (e.g., Shadow, Visiting Professor)."""
     from src.config import ACTIVITY_CATEGORIES, ACTIVITY_DISPLAY_NAMES
@@ -2123,7 +2123,7 @@ def activity_role_list(request, category, subcategory):
     })
 
 
-@login_required
+
 def activity_entries(request, category, subcategory):
     """Show all entries for an activity type."""
     from src.config import ACTIVITY_CATEGORIES, ACTIVITY_DISPLAY_NAMES
@@ -2215,7 +2215,7 @@ def activity_entries(request, category, subcategory):
     })
 
 
-@login_required
+
 def activity_entries_by_role(request, category, subcategory, role):
     """Show entries filtered by a specific role/type."""
     from src.config import ACTIVITY_CATEGORIES, ACTIVITY_DISPLAY_NAMES
@@ -2318,7 +2318,7 @@ def activity_entries_by_role(request, category, subcategory, role):
     })
 
 
-@login_required
+
 def all_activities(request):
     """Show all activity entries across all categories."""
     from src.config import ACTIVITY_CATEGORIES, ACTIVITY_DISPLAY_NAMES
@@ -2428,7 +2428,7 @@ def all_activities(request):
     })
 
 
-@login_required
+
 def faculty_activities(request, email):
     """Show all activities for a single faculty member."""
     from src.config import ACTIVITY_CATEGORIES, ACTIVITY_DISPLAY_NAMES
@@ -2496,7 +2496,7 @@ def faculty_activities(request, email):
     })
 
 
-@login_required
+
 def add_activity(request, email):
     """Select activity type to add for a faculty member."""
     from src.config import ACTIVITY_CATEGORIES, ACTIVITY_DISPLAY_NAMES
@@ -2527,7 +2527,7 @@ def add_activity(request, email):
     })
 
 
-@login_required
+
 def add_activity_form(request, email, category, subcategory):
     """Form to add a specific activity type."""
     from src.config import ACTIVITY_CATEGORIES, ACTIVITY_DISPLAY_NAMES, REPEATING_FIELD_PATTERNS
@@ -2602,7 +2602,7 @@ def add_activity_form(request, email, category, subcategory):
     })
 
 
-@login_required
+
 def edit_activity(request, email, category, subcategory, index):
     """Edit a manual activity."""
     from src.config import ACTIVITY_CATEGORIES, ACTIVITY_DISPLAY_NAMES, REPEATING_FIELD_PATTERNS
@@ -2687,7 +2687,7 @@ def edit_activity(request, email, category, subcategory, index):
     })
 
 
-@login_required
+
 @require_POST
 def delete_activity(request, email, category, subcategory, index):
     """Delete a manual activity."""
@@ -2745,7 +2745,7 @@ def delete_activity(request, email, category, subcategory, index):
 # ACTIVITY POINTS CONFIGURATION
 # =============================================================================
 
-@login_required
+
 def activity_points_config(request):
     """Display all activity types organized by category and goal with point values."""
     categories = ActivityCategory.objects.prefetch_related(
@@ -2776,7 +2776,7 @@ def activity_points_config(request):
     })
 
 
-@login_required
+
 def activity_type_edit(request, pk):
     """Edit an activity type's point value and settings."""
     activity_type = get_object_or_404(ActivityType, pk=pk)
@@ -2807,7 +2807,7 @@ def activity_type_edit(request, pk):
     })
 
 
-@login_required
+
 @require_POST
 def activity_type_quick_edit(request, pk):
     """Quick inline edit for activity type base points."""
@@ -2825,7 +2825,7 @@ def activity_type_quick_edit(request, pk):
     return redirect('activity_points_config')
 
 
-@login_required
+
 def activity_type_create(request):
     """Create a new activity type."""
     categories = ActivityCategory.objects.filter(is_active=True).prefetch_related('goals')
@@ -2874,7 +2874,7 @@ def activity_type_create(request):
     })
 
 
-@login_required
+
 def verify_impact_factors(request):
     """
     Verify self-reported impact factors against OpenAlex data.
@@ -2940,7 +2940,7 @@ def verify_impact_factors(request):
 # DIVISION MANAGEMENT
 # =============================================================================
 
-@login_required
+
 def divisions_list(request):
     """List all divisions with their chiefs and faculty counts."""
     divisions = Division.objects.all()
@@ -2989,7 +2989,7 @@ def divisions_list(request):
     })
 
 
-@login_required
+
 @require_POST
 def division_update_chief(request, code):
     """Update the division chief."""
@@ -3013,7 +3013,7 @@ def division_update_chief(request, code):
     return redirect('divisions_list')
 
 
-@login_required
+
 @require_POST
 def division_create(request):
     """Create a new division."""
@@ -3034,7 +3034,7 @@ def division_create(request):
     return redirect('divisions_list')
 
 
-@login_required
+
 @require_POST
 def division_edit(request, code):
     """Edit a division's name."""
@@ -3051,7 +3051,7 @@ def division_edit(request, code):
     return redirect('divisions_list')
 
 
-@login_required
+
 @require_POST
 def division_delete(request, code):
     """Delete a division."""
@@ -3073,7 +3073,7 @@ def division_delete(request, code):
 # COMBINED ANNUAL VIEW
 # =============================================================================
 
-@login_required
+
 def faculty_annual_view(request, email):
     """Combined annual view of all activities for a faculty member."""
     from survey_app.models import SurveyResponse, SurveyInvitation
@@ -3276,7 +3276,7 @@ def faculty_annual_view(request, email):
     })
 
 
-@login_required
+
 def division_dashboard(request, code):
     """
     Division Chief Dashboard - shows faculty summary for a single division.
@@ -3409,7 +3409,7 @@ def division_dashboard(request, code):
     })
 
 
-@login_required
+
 def division_verify(request, code):
     """
     Handle division verification - create or remove verification record.
@@ -3448,7 +3448,7 @@ def division_verify(request, code):
     return redirect('division_dashboard', code=code)
 
 
-@login_required
+
 @require_POST
 def activity_review_action(request, email):
     """
@@ -3597,7 +3597,7 @@ def activity_review_action(request, email):
     return redirect(f"/reports/annual/{email}/?review=1")
 
 
-@login_required
+
 def export_portal_links(request):
     """Export all faculty portal links as CSV."""
     import csv
@@ -3627,7 +3627,7 @@ def export_portal_links(request):
     return response
 
 
-@login_required
+
 def export_roster(request):
     """Export full roster as CSV for editing."""
     import csv
