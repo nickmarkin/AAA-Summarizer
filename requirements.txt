@@ -17,6 +17,7 @@ rich>=13.0.0  # For interactive selection UI and pretty output
 
 # Django web interface
 django>=5.0.0
+python-dotenv>=1.0.0  # Load .env files
 gunicorn>=21.0.0  # Production WSGI server
 
 # Development/testing
