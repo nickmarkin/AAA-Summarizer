@@ -18,7 +18,12 @@ from dotenv import load_dotenv
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Load .env file from project root (won't override existing env vars)
-load_dotenv(BASE_DIR / '.env')
+_dotenv_path = BASE_DIR / '.env'
+if _dotenv_path.is_file():
+    load_dotenv(_dotenv_path)
+else:
+    # Also try current working directory as fallback
+    load_dotenv()
 
 
 # Quick-start development settings - unsuitable for production
@@ -33,9 +38,12 @@ if not _secret_key:
     if _debug_env in ('true', '1', 'yes'):
         _secret_key = 'django-insecure-dev-only-key-do-not-use-in-production'
     else:
+        _env_status = f'found at {_dotenv_path}' if _dotenv_path.is_file() else f'NOT FOUND at {_dotenv_path}'
         raise RuntimeError(
-            'SECRET_KEY environment variable is required. '
-            'Generate one with: python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"'
+            f'SECRET_KEY environment variable is required. '
+            f'.env file {_env_status}. '
+            f'Ensure your .env file is at {_dotenv_path} and contains: SECRET_KEY=your-key-here\n'
+            f'Generate a key with: python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"'
         )
 SECRET_KEY = _secret_key
 
