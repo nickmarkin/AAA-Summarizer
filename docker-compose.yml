@@ -13,8 +13,8 @@ services:
     volumes:
       # Mount for development (optional, remove in production)
       # - .:/app
-      # Persist SQLite database (sessions)
-      - db_data:/app/db
+      # Persist SQLite database
+      - db_data:/app/db.sqlite3
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/"]

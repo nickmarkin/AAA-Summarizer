@@ -24,8 +24,8 @@ RUN pip install --no-cache-dir -r requirements.txt gunicorn
 # Copy project files
 COPY . .
 
-# Collect static files
-RUN python manage.py collectstatic --noinput
+# Collect static files (DEBUG=True allows build without SECRET_KEY)
+RUN DEBUG=True python manage.py collectstatic --noinput
 
 # Create non-root user
 RUN useradd -m appuser && chown -R appuser:appuser /app
