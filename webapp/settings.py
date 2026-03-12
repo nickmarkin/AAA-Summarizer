@@ -69,6 +69,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -198,6 +199,11 @@ USE_TZ = True
 STATIC_URL = 'static/'
 STATICFILES_DIRS = [BASE_DIR / 'static'] if (BASE_DIR / 'static').exists() else []
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+STORAGES = {
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
 
 # Media files (uploads)
 MEDIA_URL = 'media/'
@@ -266,11 +272,13 @@ SITE_URL = os.environ.get('SITE_URL', 'http://localhost:8001')
 # These are automatically enabled when DEBUG=False
 
 if not DEBUG:
-    SECURE_SSL_REDIRECT = os.environ.get('SECURE_SSL_REDIRECT', 'True').lower() in ('true', '1', 'yes')
-    SESSION_COOKIE_SECURE = True
-    CSRF_COOKIE_SECURE = True
-    SECURE_HSTS_SECONDS = 31536000
-    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
-    SECURE_HSTS_PRELOAD = True
+    # SSL redirect — disabled by default so IT can deploy without HTTPS initially.
+    # Set SECURE_SSL_REDIRECT=True in .env once HTTPS is configured.
+    SECURE_SSL_REDIRECT = os.environ.get('SECURE_SSL_REDIRECT', 'False').lower() in ('true', '1', 'yes')
+    SESSION_COOKIE_SECURE = os.environ.get('SECURE_SSL_REDIRECT', 'False').lower() in ('true', '1', 'yes')
+    CSRF_COOKIE_SECURE = os.environ.get('SECURE_SSL_REDIRECT', 'False').lower() in ('true', '1', 'yes')
+    SECURE_HSTS_SECONDS = 31536000 if SECURE_SSL_REDIRECT else 0
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = SECURE_SSL_REDIRECT
+    SECURE_HSTS_PRELOAD = SECURE_SSL_REDIRECT
     SECURE_BROWSER_XSS_FILTER = True
     SECURE_CONTENT_TYPE_NOSNIFF = True

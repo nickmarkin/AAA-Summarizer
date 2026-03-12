@@ -19,6 +19,7 @@ rich>=13.0.0  # For interactive selection UI and pretty output
 django>=6.0.0,<7.0.0
 python-dotenv>=1.0.0  # Load .env files
 gunicorn>=21.0.0  # Production WSGI server
+whitenoise>=6.5.0  # Serve static files in production
 
 # Development/testing
 pytest>=7.0.0
