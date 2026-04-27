@@ -1,68 +1,156 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Survey Submitted - UNMC Anesthesiology</title>
+    <title>Survey Submitted — UNMC Anesthesiology</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="{% static 'css/unmc-tokens.css' %}" rel="stylesheet">
     <style>
         body {
-            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            margin: 0;
+            background: var(--paper-warm);
             min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 20px;
+            padding: 24px;
+            font-family: var(--font-sans);
+            color: var(--ink-800);
+            font-size: 14px;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        h1, h2, h3, h4, h5, h6 {
+            font-family: var(--font-display);
+            color: var(--ink-900);
+            font-weight: 700;
+            letter-spacing: -0.01em;
+            line-height: 1.2;
+            margin: 0;
         }
         .confirmation-card {
-            background: white;
-            border-radius: 16px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            background: var(--paper);
+            border: 1px solid var(--ink-200);
+            border-radius: var(--r-xl);
+            box-shadow: var(--shadow-md);
             max-width: 550px;
             width: 100%;
-            padding: 40px;
+            padding: 40px 32px;
             text-align: center;
         }
         .success-icon {
-            width: 100px;
-            height: 100px;
-            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            width: 72px;
+            height: 72px;
+            background: var(--success-tint);
+            border: 1px solid #C8E2CA;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            margin: 0 auto 25px;
-            animation: scaleIn 0.5s ease-out;
+            margin: 0 auto 16px;
+            animation: scaleIn 360ms ease-out;
         }
         .success-icon i {
-            font-size: 3rem;
-            color: white;
+            font-size: 32px;
+            color: var(--success);
         }
         @keyframes scaleIn {
-            from { transform: scale(0); }
-            to { transform: scale(1); }
+            from { transform: scale(0.6); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
         }
+
+        h2 { font-size: 22px; margin-bottom: 6px; }
+        .lead { color: var(--ink-700); font-size: 14px; margin: 0; }
+
+        .alert {
+            border-radius: var(--r-md);
+            border: 1px solid transparent;
+            padding: 10px 14px;
+            font-size: 13px;
+            margin-top: 16px;
+            text-align: left;
+        }
+        .alert-success { background: var(--success-tint); border-color: #C8E2CA; color: #1B5E20; }
+
         .points-summary {
-            background: #f8f9fa;
-            border-radius: 12px;
-            padding: 20px;
-            margin: 25px 0;
+            background: var(--ink-50);
+            border: 1px solid var(--ink-200);
+            border-radius: var(--r-lg);
+            padding: 18px 20px;
+            margin: 24px 0;
+            text-align: left;
+        }
+        .points-summary .eyebrow {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            color: var(--ink-600);
+            font-weight: 500;
+            margin-bottom: 12px;
         }
         .points-row {
             display: flex;
             justify-content: space-between;
             padding: 8px 0;
-            border-bottom: 1px solid #e9ecef;
+            border-bottom: 1px solid var(--ink-200);
+            font-size: 13px;
+            color: var(--ink-800);
         }
-        .points-row:last-child {
-            border-bottom: none;
-            font-weight: bold;
-            font-size: 1.1rem;
+        .points-row span:last-child {
+            font-family: var(--font-mono);
+            color: var(--ink-700);
+        }
+        .points-row.total {
+            border-bottom: 0;
+            border-top: 1px solid var(--ink-300);
+            margin-top: 6px;
             padding-top: 12px;
-            margin-top: 8px;
-            border-top: 2px solid #dee2e6;
+            font-weight: 700;
+            font-size: 15px;
+            color: var(--ink-900);
         }
+        .points-row.total span:last-child { color: var(--success); font-weight: 700; }
+
+        .meta-text {
+            color: var(--ink-600);
+            font-size: 12px;
+            margin: 8px 0;
+        }
+
+        .btn {
+            font-family: var(--font-sans);
+            font-weight: 500;
+            border-radius: var(--r-md);
+            font-size: 14px;
+            padding: 9px 16px;
+        }
+        .btn-outline-primary {
+            background: transparent;
+            color: var(--unmc-red);
+            border: 1px solid var(--unmc-red);
+        }
+        .btn-outline-primary:hover {
+            background: var(--unmc-red);
+            color: #fff;
+        }
+        hr { border: 0; border-top: 1px solid var(--ink-200); margin: 16px 0; }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--ink-600);
+            text-decoration: none;
+            font-size: 13px;
+            margin-top: 12px;
+        }
+        .back-link:hover { color: var(--unmc-red); }
     </style>
 </head>
 <body>
@@ -71,72 +159,45 @@
             <i class="bi bi-check-lg"></i>
         </div>
 
-        <h2 class="mb-2">Survey Submitted!</h2>
-        <p class="text-muted mb-0">
-            Thank you, {{ invitation.faculty.first_name }}. Your academic achievement survey has been recorded.
-        </p>
+        <h2>Survey submitted</h2>
+        <p class="lead">Thank you, {{ invitation.faculty.first_name }}. Your academic achievement survey has been recorded.</p>
 
-        <div class="alert alert-success mt-4">
+        <div class="alert alert-success">
             <i class="bi bi-envelope-check"></i>
-            A confirmation email has been sent to <strong>{{ invitation.faculty.email }}</strong>
+            A confirmation email has been sent to <strong>{{ invitation.faculty.email }}</strong>.
         </div>
 
-        <div class="points-summary text-start">
-            <h6 class="text-uppercase text-muted mb-3">Points Summary</h6>
-            <div class="points-row">
-                <span>Citizenship</span>
-                <span>{{ response.citizenship_points|default:0 }}</span>
-            </div>
-            <div class="points-row">
-                <span>Education</span>
-                <span>{{ response.education_points|default:0 }}</span>
-            </div>
-            <div class="points-row">
-                <span>Research</span>
-                <span>{{ response.research_points|default:0 }}</span>
-            </div>
-            <div class="points-row">
-                <span>Leadership</span>
-                <span>{{ response.leadership_points|default:0 }}</span>
-            </div>
-            <div class="points-row">
-                <span>Content Expert</span>
-                <span>{{ response.content_expert_points|default:0 }}</span>
-            </div>
-            <div class="points-row">
-                <span>Total Survey Points</span>
-                <span class="text-success">{{ response.total_points|default:0 }}</span>
-            </div>
+        <div class="points-summary">
+            <div class="eyebrow">Points summary</div>
+            <div class="points-row"><span>Citizenship</span><span>{{ response.citizenship_points|default:0 }}</span></div>
+            <div class="points-row"><span>Education</span><span>{{ response.education_points|default:0 }}</span></div>
+            <div class="points-row"><span>Research</span><span>{{ response.research_points|default:0 }}</span></div>
+            <div class="points-row"><span>Leadership</span><span>{{ response.leadership_points|default:0 }}</span></div>
+            <div class="points-row"><span>Content Expert</span><span>{{ response.content_expert_points|default:0 }}</span></div>
+            <div class="points-row total"><span>Total survey points</span><span>{{ response.total_points|default:0 }}</span></div>
         </div>
 
-        <p class="text-muted small">
-            <strong>Submitted:</strong> {{ invitation.submitted_at|date:"F j, Y" }} at {{ invitation.submitted_at|time:"g:i A" }}
-            <br>
+        <p class="meta-text">
+            <strong>Submitted:</strong> {{ invitation.submitted_at|date:"F j, Y" }} at {{ invitation.submitted_at|time:"g:i A" }}<br>
             <strong>Campaign:</strong> {{ invitation.campaign.name }}
         </p>
 
         <hr>
 
         {% if invitation.campaign.is_open %}
-        <div class="mb-3">
+        <div style="margin-bottom: 12px;">
             <a href="{% url 'survey:survey_landing' token=invitation.token %}" class="btn btn-outline-primary">
-                <i class="bi bi-pencil"></i> Make Changes
+                <i class="bi bi-pencil"></i> Make changes
             </a>
         </div>
-        <p class="text-muted small mb-0">
-            You can edit your submission until {{ invitation.campaign.closes_at|date:"F j, Y" }}.
-        </p>
+        <p class="meta-text">You can edit your submission until {{ invitation.campaign.closes_at|date:"F j, Y" }}.</p>
         {% else %}
-        <p class="text-muted small mb-0">
-            You may close this window. If you have questions, please contact the department.
-        </p>
+        <p class="meta-text">You may close this window. If you have questions, please contact the department.</p>
         {% endif %}
 
-        <div class="mt-4 pt-3" style="border-top: 1px solid #eee;">
-            <a href="{% url 'faculty_portal' invitation.faculty.access_token %}" class="text-muted text-decoration-none">
-                <i class="bi bi-arrow-left"></i> Back to My Portal
-            </a>
-        </div>
+        <a href="{% url 'faculty_portal' invitation.faculty.access_token %}" class="back-link">
+            <i class="bi bi-arrow-left"></i> Back to my portal
+        </a>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>

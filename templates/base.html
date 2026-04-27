@@ -6,20 +6,55 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Academic Achievement Summarizer{% endblock %}</title>
 
+    <!-- Roboto + Roboto Mono (UNMC brand typeface) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
+
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Bootstrap Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
 
+    <!-- UNMC Design Tokens -->
+    <link href="{% static 'css/unmc-tokens.css' %}" rel="stylesheet">
+
     <style>
+        /* ─────────────────────────────────────────────
+           UNMC AAA Summarizer — App shell
+           Direction B (Balanced). Tokens in unmc-tokens.css
+           ───────────────────────────────────────────── */
+
         :root {
-            --sidebar-width: 250px;
+            --sidebar-width: 240px;
+            --topbar-height: 64px;
         }
 
         body {
             min-height: 100vh;
+            font-family: var(--font-sans);
+            color: var(--ink-800);
+            background: var(--ink-50);
+            font-size: 14px;
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
         }
 
+        h1, h2, h3, h4, h5, h6 {
+            font-family: var(--font-display);
+            color: var(--ink-900);
+            font-weight: 700;
+            letter-spacing: -0.01em;
+            line-height: 1.2;
+        }
+
+        a { color: var(--unmc-red); }
+        a:hover { color: var(--unmc-red-dark); }
+
+        code, .mono { font-family: var(--font-mono); }
+
+        /* ── Sidebar ───────────────────────────────── */
         .sidebar {
             width: var(--sidebar-width);
             position: fixed;
@@ -27,203 +62,607 @@
             left: 0;
             height: 100vh;
             z-index: 100;
-            background-color: #212529;
+            background: var(--unmc-gray-11);
+            border-right: 1px solid #3F4A51;
+            overflow-y: auto;
         }
+
+        .sidebar-brand {
+            padding: 18px 16px 16px;
+            border-bottom: 1px solid #3F4A51;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .sidebar-brand img {
+            width: 28px;
+            height: 28px;
+            object-fit: contain;
+            flex-shrink: 0;
+        }
+        .sidebar-brand-text { line-height: 1.15; }
+        .sidebar-brand-title {
+            font-size: 14px;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: -0.005em;
+        }
+        .sidebar-brand-sub {
+            font-size: 10px;
+            color: rgba(255,255,255,0.55);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-top: 2px;
+        }
+
+        .sidebar .nav-section-eyebrow {
+            font-size: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            color: rgba(255,255,255,0.4);
+            padding: 14px 16px 4px;
+        }
+
+        .sidebar .nav { padding: 8px 8px 12px; }
 
         .sidebar .nav-link {
-            color: rgba(255, 255, 255, 0.8);
-            padding: 0.75rem 1rem;
-            border-radius: 0.25rem;
-            margin: 0.125rem 0.5rem;
+            color: rgba(255,255,255,0.78);
+            padding: 8px 12px;
+            border-radius: 6px;
+            margin: 1px 0;
+            font-size: 13px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: background 120ms ease, color 120ms ease;
         }
-
         .sidebar .nav-link:hover {
             color: #fff;
-            background-color: rgba(255, 255, 255, 0.1);
+            background: rgba(255,255,255,0.08);
         }
-
         .sidebar .nav-link.active {
             color: #fff;
-            background-color: #0d6efd;
+            background: var(--unmc-red);
         }
-
         .sidebar .nav-link i {
-            margin-right: 0.5rem;
+            width: 16px;
+            text-align: center;
+            font-size: 14px;
+            margin-right: 0;
         }
 
+        .sidebar-version {
+            padding: 10px 16px 16px;
+            color: rgba(255,255,255,0.35);
+            font-size: 10px;
+            font-family: var(--font-mono);
+            letter-spacing: 0.02em;
+        }
+
+        /* ── Main content ──────────────────────────── */
         .main-content {
             margin-left: var(--sidebar-width);
             min-height: 100vh;
-            background: #f5f5f5;
+            background: var(--ink-50);
         }
 
+        /* ── Top bar ───────────────────────────────── */
         .top-bar {
-            background-color: #fff;
-            border-bottom: 1px solid #dee2e6;
-            padding: 1rem;
+            height: var(--topbar-height);
+            background: var(--paper);
+            border-bottom: 1px solid var(--ink-200);
+            padding: 0 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
         }
+        .top-bar .page-title,
+        .top-bar h4 {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--ink-900);
+            margin: 0;
+            letter-spacing: -0.01em;
+        }
+
+        .top-bar .form-select-sm {
+            border-radius: var(--r-md);
+            border-color: var(--ink-300);
+            font-size: 13px;
+            color: var(--ink-800);
+        }
+        .top-bar .form-select-sm:focus {
+            border-color: var(--unmc-red);
+            box-shadow: 0 0 0 3px rgba(173,18,42,0.12);
+        }
+        .top-bar label.text-muted { color: var(--ink-600) !important; font-size: 12px; }
 
         .content-area {
-            padding: 1.5rem;
+            padding: 24px;
         }
 
-        /* Card styling */
+        /* ── Bootstrap button overrides ───────────── */
+        .btn {
+            font-family: var(--font-sans);
+            font-weight: 500;
+            border-radius: var(--r-md);
+            font-size: 14px;
+            padding: 9px 16px;
+            transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
+        }
+        .btn-sm { padding: 6px 12px; font-size: 13px; }
+        .btn-lg { padding: 12px 22px; font-size: 15px; }
+
+        .btn-primary,
+        .btn-primary:focus {
+            background: var(--unmc-red);
+            border-color: var(--unmc-red);
+            color: #fff;
+        }
+        .btn-primary:hover,
+        .btn-primary:active,
+        .btn-primary:focus-visible,
+        .btn-primary:not(:disabled):not(.disabled).active,
+        .btn-primary:not(:disabled):not(.disabled):active {
+            background: var(--unmc-red-dark) !important;
+            border-color: var(--unmc-red-dark) !important;
+            color: #fff !important;
+        }
+
+        .btn-secondary,
+        .btn-outline-secondary {
+            background: var(--paper);
+            border-color: var(--ink-300);
+            color: var(--ink-800);
+        }
+        .btn-secondary:hover,
+        .btn-outline-secondary:hover {
+            background: var(--ink-50);
+            border-color: var(--ink-400);
+            color: var(--ink-900);
+        }
+
+        .btn-success {
+            background: var(--success);
+            border-color: var(--success);
+            color: #fff;
+        }
+        .btn-success:hover {
+            background: #1B5E20;
+            border-color: #1B5E20;
+        }
+
+        .btn-warning {
+            background: var(--warning);
+            border-color: var(--warning);
+            color: #fff;
+        }
+        .btn-warning:hover {
+            background: #A86200;
+            border-color: #A86200;
+            color: #fff;
+        }
+
+        .btn-danger {
+            background: var(--unmc-red);
+            border-color: var(--unmc-red);
+            color: #fff;
+        }
+        .btn-danger:hover {
+            background: var(--unmc-red-dark);
+            border-color: var(--unmc-red-dark);
+        }
+
+        .btn-info {
+            background: var(--info);
+            border-color: var(--info);
+            color: #fff;
+        }
+        .btn-info:hover {
+            background: #1858BD;
+            border-color: #1858BD;
+            color: #fff;
+        }
+
+        .btn-outline-primary {
+            background: transparent;
+            border-color: var(--unmc-red);
+            color: var(--unmc-red);
+        }
+        .btn-outline-primary:hover {
+            background: var(--unmc-red);
+            border-color: var(--unmc-red);
+            color: #fff;
+        }
+
+        .btn:focus-visible {
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(173,18,42,0.18);
+        }
+
+        /* ── Bootstrap card overrides ─────────────── */
         .card {
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            padding: 20px;
-            margin: 15px 0;
-            background: #fafafa;
+            background: var(--paper);
+            border: 1px solid var(--ink-200);
+            border-radius: var(--r-lg);
+            box-shadow: var(--shadow-sm);
+            margin-bottom: 16px;
+        }
+        .card-body { padding: 20px; }
+        .card-header {
+            background: var(--paper);
+            border-bottom: 1px solid var(--ink-200);
+            padding: 14px 20px;
+            font-weight: 600;
+            color: var(--ink-900);
+        }
+        .card-footer {
+            background: var(--paper);
+            border-top: 1px solid var(--ink-200);
+            padding: 12px 20px;
         }
         .card h3 {
-            margin-bottom: 10px;
-            color: #2c3e50;
-        }
-        .card p {
-            color: #666;
-            margin-bottom: 15px;
-        }
-
-        /* Button styling */
-        .btn, .btn-app {
-            display: inline-block;
-            padding: 12px 24px;
-            background: #5dade2;
-            color: white;
-            text-decoration: none;
-            border-radius: 4px;
-            border: none;
-            cursor: pointer;
+            margin-bottom: 8px;
+            color: var(--ink-900);
             font-size: 16px;
-            margin: 5px 5px 5px 0;
         }
-        .btn:hover, .btn-app:hover { background: #3498db; color: white; }
-        .btn-secondary { background: #6c757d; }
-        .btn-secondary:hover { background: #5a6268; color: white; }
-        .btn-success { background: #28a745; }
-        .btn-success:hover { background: #218838; color: white; }
+        .card p { color: var(--ink-700); margin-bottom: 12px; }
 
-        /* Badge styling */
+        /* ── Bootstrap badge overrides ────────────── */
         .badge {
-            display: inline-block;
-            padding: 4px 10px;
-            border-radius: 4px;
-            font-size: 12px;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 3px 8px;
+            border-radius: 999px;
+            font-size: 11px;
             font-weight: 600;
+            letter-spacing: 0.02em;
+            border: 1px solid transparent;
         }
-        .badge-success {
-            background: #28a745;
-            color: white;
+        .badge.bg-success, .badge.text-bg-success {
+            background: var(--success-tint) !important;
+            color: #1B5E20 !important;
+            border-color: #C8E2CA;
         }
-        .badge-warning {
-            background: #f39c12;
-            color: white;
+        .badge.bg-warning, .badge.text-bg-warning {
+            background: var(--warning-tint) !important;
+            color: #7A4A00 !important;
+            border-color: #F3DDB3;
         }
-        .badge-danger {
-            background: #dc3545;
-            color: white;
+        .badge.bg-danger, .badge.text-bg-danger {
+            background: var(--danger-tint) !important;
+            color: #7A0C1D !important;
+            border-color: #EACDD2;
         }
-        .badge-info {
-            background: #17a2b8;
-            color: white;
+        .badge.bg-info, .badge.text-bg-info {
+            background: var(--info-tint) !important;
+            color: #0D3F99 !important;
+            border-color: #CCDAF6;
+        }
+        .badge.bg-secondary, .badge.text-bg-secondary {
+            background: var(--ink-100) !important;
+            color: var(--ink-700) !important;
+            border-color: var(--ink-200);
+        }
+        .badge.bg-primary, .badge.text-bg-primary {
+            background: var(--unmc-red) !important;
+            color: #fff !important;
+            border-color: var(--unmc-red);
         }
 
-        /* Form styling */
-        .form-group {
-            margin: 15px 0;
+        /* Legacy badge classes (kept for templates that use them) */
+        .badge-success { background: var(--success-tint); color: #1B5E20; }
+        .badge-warning { background: var(--warning-tint); color: #7A4A00; }
+        .badge-danger  { background: var(--danger-tint);  color: #7A0C1D; }
+        .badge-info    { background: var(--info-tint);    color: #0D3F99; }
+
+        /* ── Bootstrap form overrides ─────────────── */
+        .form-control,
+        .form-select {
+            font-family: var(--font-sans);
+            font-size: 14px;
+            color: var(--ink-900);
+            border: 1px solid var(--ink-300);
+            border-radius: var(--r-md);
+            padding: 9px 12px;
+            background: var(--paper);
         }
-        .form-group label {
-            display: block;
-            margin-bottom: 5px;
+        .form-control:focus,
+        .form-select:focus {
+            outline: none;
+            border-color: var(--unmc-red);
+            box-shadow: 0 0 0 3px rgba(173,18,42,0.12);
+        }
+        .form-label {
+            font-size: 13px;
             font-weight: 500;
+            color: var(--ink-800);
+            margin-bottom: 6px;
+        }
+        .form-check-input:checked {
+            background-color: var(--unmc-red);
+            border-color: var(--unmc-red);
+        }
+        .form-check-input:focus {
+            border-color: var(--unmc-red);
+            box-shadow: 0 0 0 3px rgba(173,18,42,0.12);
         }
 
-        /* Summary stats */
+        /* ── Bootstrap table overrides ────────────── */
+        .table {
+            color: var(--ink-800);
+            border-color: var(--ink-200);
+        }
+        .table > thead {
+            background: var(--ink-50);
+        }
+        .table > thead th {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--ink-600);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            padding: 10px 16px;
+            border-bottom: 1px solid var(--ink-200);
+        }
+        .table > tbody td {
+            padding: 12px 16px;
+            border-color: var(--ink-200);
+            vertical-align: middle;
+        }
+        .table-hover > tbody > tr:hover > * {
+            background: var(--ink-50);
+        }
+        .table-striped > tbody > tr:nth-of-type(odd) > * {
+            background: var(--ink-50);
+        }
+
+        /* ── Alerts ───────────────────────────────── */
+        .alert {
+            border-radius: var(--r-lg);
+            border: 1px solid transparent;
+            padding: 12px 16px;
+            font-size: 14px;
+        }
+        .alert-success { background: var(--success-tint); border-color: #C8E2CA; color: #1B5E20; }
+        .alert-warning { background: var(--warning-tint); border-color: #F3DDB3; color: #7A4A00; }
+        .alert-danger  { background: var(--danger-tint);  border-color: #EACDD2; color: #7A0C1D; }
+        .alert-info    { background: var(--info-tint);    border-color: #CCDAF6; color: #0D3F99; }
+        .alert-secondary { background: var(--ink-50); border-color: var(--ink-200); color: var(--ink-700); }
+
+        /* ── Modal overrides ──────────────────────── */
+        .modal-content {
+            border-radius: var(--r-lg);
+            border: 1px solid var(--ink-200);
+            box-shadow: var(--shadow-lg);
+        }
+        .modal-header {
+            background: var(--paper);
+            border-bottom: 1px solid var(--ink-200);
+            color: var(--ink-900);
+            padding: 16px 20px;
+        }
+        .modal-title {
+            color: var(--ink-900);
+            font-size: 16px;
+            font-weight: 700;
+        }
+        .modal-body { padding: 20px; }
+        .modal-footer {
+            border-top: 1px solid var(--ink-200);
+            padding: 12px 20px;
+            gap: 8px;
+        }
+
+        /* ── Accordion (used in Help modal) ───────── */
+        .accordion-item {
+            border: 1px solid var(--ink-200);
+            border-radius: var(--r-md) !important;
+            margin-bottom: 6px;
+            overflow: hidden;
+        }
+        .accordion-button {
+            font-family: var(--font-sans);
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--ink-900);
+            background: var(--paper);
+            padding: 12px 16px;
+        }
+        .accordion-button:not(.collapsed) {
+            background: var(--ink-50);
+            color: var(--ink-900);
+            box-shadow: none;
+        }
+        .accordion-button:focus {
+            border-color: var(--unmc-red);
+            box-shadow: 0 0 0 3px rgba(173,18,42,0.12);
+        }
+
+        /* ── Toasts ───────────────────────────────── */
+        .toast {
+            border-radius: var(--r-md);
+            border: 1px solid var(--ink-200);
+            box-shadow: var(--shadow-md);
+        }
+
+        /* ── Page header pattern ──────────────────── */
+        .page-header {
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            gap: 16px;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+        }
+        .page-header .page-eyebrow {
+            font-size: 11px;
+            font-weight: 500;
+            color: var(--ink-600);
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            margin-bottom: 4px;
+        }
+        .page-header h1 {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--ink-900);
+            margin: 0;
+        }
+        .page-header .page-subtitle {
+            font-size: 14px;
+            color: var(--ink-600);
+            margin-top: 4px;
+        }
+        .page-header .page-actions {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        /* ── Status icon (22x22 quarter badges) ────── */
+        .status-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 22px;
+            height: 22px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+            border: 1px solid transparent;
+        }
+        .status-icon--submitted { background: var(--success); color: #fff; }
+        .status-icon--inprogress { background: var(--warning); color: #2C1A00; }
+        .status-icon--pending { background: var(--ink-100); color: var(--ink-500); }
+        .status-icon--notinvited { background: var(--paper); color: var(--ink-400); border-color: var(--ink-300); }
+
+        /* ── Eyebrow utility ───────────────────────── */
+        .eyebrow {
+            font-size: 11px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            color: var(--ink-600);
+        }
+
+        /* ── Legacy classes still used in templates ─ */
         .summary-stats {
             display: flex;
-            gap: 20px;
+            gap: 16px;
             flex-wrap: wrap;
-            margin: 20px 0;
+            margin: 16px 0;
         }
         .stat {
-            background: #e8f4f8;
-            padding: 15px 20px;
-            border-radius: 6px;
+            background: var(--paper);
+            border: 1px solid var(--ink-200);
+            box-shadow: var(--shadow-sm);
+            padding: 16px 20px;
+            border-radius: var(--r-lg);
             text-align: center;
+            flex: 1 1 160px;
         }
         .stat-value {
-            font-size: 24px;
-            font-weight: bold;
-            color: #2c3e50;
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--ink-900);
+            font-family: var(--font-display);
         }
         .stat-label {
-            font-size: 12px;
-            color: #666;
+            font-size: 11px;
+            color: var(--ink-600);
             text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin-top: 4px;
         }
 
-        /* Checkbox list */
+        .form-group { margin: 16px 0; }
+        .form-group label { display: block; margin-bottom: 6px; font-weight: 500; color: var(--ink-800); font-size: 13px; }
+
         .checkbox-list {
             max-height: 400px;
             overflow-y: auto;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            padding: 10px;
-            background: #fafafa;
+            border: 1px solid var(--ink-200);
+            border-radius: var(--r-md);
+            padding: 8px;
+            background: var(--paper);
         }
         .checkbox-item {
-            padding: 8px 10px;
-            border-bottom: 1px solid #eee;
+            padding: 10px 12px;
+            border-bottom: 1px solid var(--ink-200);
             display: flex;
             align-items: center;
+            gap: 10px;
+            border-radius: var(--r-sm);
         }
         .checkbox-item:last-child { border-bottom: none; }
-        .checkbox-item:hover { background: #f0f0f0; }
+        .checkbox-item:hover { background: var(--ink-50); }
         .checkbox-item input[type="checkbox"] {
-            margin-right: 10px;
-            width: 18px;
-            height: 18px;
+            width: 16px;
+            height: 16px;
+            accent-color: var(--unmc-red);
         }
-        .checkbox-item label {
-            flex: 1;
-            cursor: pointer;
-        }
-        .checkbox-item .points {
-            color: #666;
-            font-size: 14px;
-        }
+        .checkbox-item label { flex: 1; cursor: pointer; color: var(--ink-800); }
+        .checkbox-item .points { color: var(--ink-600); font-family: var(--font-mono); font-size: 13px; }
         .checkbox-item .status {
-            font-size: 12px;
+            font-size: 11px;
             padding: 2px 8px;
-            border-radius: 3px;
-            margin-left: 10px;
+            border-radius: 999px;
+            font-weight: 600;
         }
-        .checkbox-item .status.complete { background: #d4edda; color: #155724; }
-        .checkbox-item .status.incomplete { background: #f8d7da; color: #721c24; }
+        .checkbox-item .status.complete { background: var(--success-tint); color: #1B5E20; }
+        .checkbox-item .status.incomplete { background: var(--danger-tint); color: #7A0C1D; }
 
-        /* Category sections */
-        .category-section {
-            margin: 20px 0;
-        }
+        .category-section { margin: 16px 0; }
         .category-header {
-            background: #34495e;
-            color: white;
-            padding: 10px 15px;
-            border-radius: 4px 4px 0 0;
-            font-weight: 500;
+            background: var(--ink-50);
+            color: var(--ink-700);
+            padding: 8px 16px;
+            border: 1px solid var(--ink-200);
+            border-radius: var(--r-md) var(--r-md) 0 0;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
         }
         .category-items {
-            border: 1px solid #ddd;
+            border: 1px solid var(--ink-200);
             border-top: none;
-            border-radius: 0 0 4px 4px;
+            border-radius: 0 0 var(--r-md) var(--r-md);
+            background: var(--paper);
         }
 
-        /* Actions bar */
         .actions {
-            margin: 20px 0;
-            padding: 15px;
-            background: #f8f9fa;
-            border-radius: 4px;
+            margin: 16px 0;
+            padding: 16px;
+            background: var(--paper);
+            border: 1px solid var(--ink-200);
+            border-radius: var(--r-lg);
+        }
+
+        /* ── Print ────────────────────────────────── */
+        @media print {
+            .sidebar, .top-bar, .toast-container, .page-actions, .btn, .u-btn { display: none !important; }
+            .main-content { margin-left: 0; background: #fff; }
+            .content-area { padding: 0; }
+        }
+
+        /* ── Mobile reflow ────────────────────────── */
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+                transition: transform 200ms ease;
+            }
+            .sidebar.is-open { transform: translateX(0); }
+            .main-content { margin-left: 0; }
+            .top-bar { padding: 0 16px; }
+            .content-area { padding: 16px; }
         }
     </style>
 
@@ -232,14 +671,16 @@
 <body>
     <!-- Sidebar -->
     <nav class="sidebar d-flex flex-column">
-        <div class="p-3 border-bottom border-secondary">
-            <h5 class="text-white mb-0">
-                <i class="bi bi-award"></i> Academic Achievement Summarizer
-            </h5>
-            <small class="text-white-50">UNMC Anesthesiology</small>
+        <div class="sidebar-brand">
+            <img src="{% static 'images/unmc-logo.png' %}" alt="UNMC">
+            <div class="sidebar-brand-text">
+                <div class="sidebar-brand-title">AAA Summarizer</div>
+                <div class="sidebar-brand-sub">UNMC Anesthesiology</div>
+            </div>
         </div>
 
-        <ul class="nav flex-column mt-3">
+        <div class="nav-section-eyebrow">Workspace</div>
+        <ul class="nav flex-column">
             <li class="nav-item">
                 <a class="nav-link {% if request.resolver_match.url_name == 'index' %}active{% endif %}"
                    href="{% url 'index' %}">
@@ -284,44 +725,50 @@
             </li>
         </ul>
 
-        <div class="mt-auto p-3 border-top border-secondary">
-            <small class="text-white-50 text-uppercase px-3 mb-1 d-block" style="font-size: 0.7rem;">Configuration</small>
-            <a class="nav-link {% if 'divisions' in request.resolver_match.url_name %}active{% else %}text-white-50{% endif %}" href="{% url 'divisions_list' %}">
-                <i class="bi bi-diagram-3"></i> Divisions
-            </a>
-            <a class="nav-link {% if 'activity_points' in request.resolver_match.url_name or 'activity_type_edit' in request.resolver_match.url_name %}active{% else %}text-white-50{% endif %}" href="{% url 'activity_points_config' %}">
-                <i class="bi bi-sliders"></i> Activity Points
-            </a>
-            <a class="nav-link {% if 'import' in request.resolver_match.url_name %}active{% else %}text-white-50{% endif %}" href="{% url 'import_survey' %}">
-                <i class="bi bi-upload"></i> Import Survey
-            </a>
-            <a class="nav-link text-white-50" href="{% url 'year_list' %}">
-                <i class="bi bi-calendar3"></i> Academic Years
-            </a>
-        </div>
+        <div class="mt-auto">
+            <div class="nav-section-eyebrow">Configuration</div>
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <a class="nav-link {% if 'divisions' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'divisions_list' %}">
+                        <i class="bi bi-diagram-3"></i> Divisions
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if 'activity_points' in request.resolver_match.url_name or 'activity_type_edit' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'activity_points_config' %}">
+                        <i class="bi bi-sliders"></i> Activity Points
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if 'import' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'import_survey' %}">
+                        <i class="bi bi-upload"></i> Import Survey
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if 'year' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'year_list' %}">
+                        <i class="bi bi-calendar3"></i> Academic Years
+                    </a>
+                </li>
+            </ul>
 
-        <!-- Version info -->
-        <div class="px-3 pb-2">
-            <small class="text-white-50" style="font-size: 0.7rem;">{{ app_version.display }}</small>
+            <div class="sidebar-version">{{ app_version.display }}</div>
         </div>
     </nav>
 
     <!-- Main Content -->
     <main class="main-content">
         <!-- Top Bar -->
-        <div class="top-bar d-flex justify-content-between align-items-center">
+        <div class="top-bar">
             <div>
-                <h4 class="mb-0">{% block page_title %}{% endblock %}</h4>
+                <h4 class="page-title mb-0">{% block page_title %}{% endblock %}</h4>
             </div>
             <div class="d-flex align-items-center gap-3">
                 <!-- Help Button -->
-                <button type="button" class="btn btn-sm" data-bs-toggle="modal" data-bs-target="#helpModal" title="Help & Instructions"
-                        style="background: #f0ad4e; color: white; font-weight: 500; padding: 4px 12px; border-radius: 4px; border: none;">
-                    <i class="bi bi-info-circle me-1"></i> Info
+                <button type="button" class="u-btn u-btn--ghost u-btn--sm" data-bs-toggle="modal" data-bs-target="#helpModal" title="Help & Instructions">
+                    <i class="bi bi-question-circle"></i> Help
                 </button>
                 <!-- Year Selector -->
                 <form action="{% url 'select_year' %}" method="get" class="d-flex align-items-center gap-2">
-                    <label for="year-select" class="text-muted mb-0" style="font-size: 14px;">Academic Year:</label>
+                    <label for="year-select" class="text-muted mb-0">Academic Year:</label>
                     <select name="year" id="year-select" class="form-select form-select-sm" style="width: auto;" onchange="this.form.submit()">
                         {% for year in academic_years %}
                         <option value="{{ year.year_code }}" {% if year.year_code == selected_academic_year.year_code %}selected{% endif %}>
@@ -365,12 +812,12 @@
     <div class="modal fade" id="helpModal" tabindex="-1" aria-labelledby="helpModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-lg modal-dialog-scrollable">
             <div class="modal-content">
-                <div class="modal-header bg-primary text-white">
+                <div class="modal-header">
                     <h5 class="modal-title" id="helpModalLabel">
-                        <i class="bi bi-info-circle me-2"></i>
-                        Academic Achievement Award System - User Guide
+                        <i class="bi bi-question-circle me-2"></i>
+                        Academic Achievement Award System — User Guide
                     </h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
                     <div class="accordion" id="helpAccordion">
@@ -513,9 +960,9 @@
                                         <li>Click each faculty name to review their activities</li>
                                         <li>For each activity, choose:
                                             <ul>
-                                                <li><span class="badge bg-success">✓ Verify</span> - Activity is correct</li>
-                                                <li><span class="badge bg-warning text-dark">⚑ Flag</span> - Needs correction/clarification</li>
-                                                <li><span class="badge bg-danger">✗ Strike</span> - Remove (erroneous/invalid)</li>
+                                                <li><span class="badge bg-success"><i class="bi bi-check-lg"></i> Verify</span> - Activity is correct</li>
+                                                <li><span class="badge bg-warning"><i class="bi bi-flag"></i> Flag</span> - Needs correction/clarification</li>
+                                                <li><span class="badge bg-danger"><i class="bi bi-x-lg"></i> Strike</span> - Remove (erroneous/invalid)</li>
                                             </ul>
                                         </li>
                                         <li>Use <strong>Verify All</strong> for quick approval of all activities</li>

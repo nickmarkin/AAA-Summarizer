@@ -3,207 +3,284 @@
 
 {% block title %}Divisions - UNMC Anesthesiology{% endblock %}
 
+{% block page_title %}Divisions{% endblock %}
+
+{% block extra_css %}
+<style>
+    .division-card {
+        background: var(--paper);
+        border: 1px solid var(--ink-200);
+        border-radius: var(--r-lg);
+        box-shadow: var(--shadow-sm);
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
+    .division-card .card-header {
+        background: var(--paper);
+        border-bottom: 1px solid var(--ink-200);
+        padding: 14px 18px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .division-card .card-header h5 {
+        font-size: 15px;
+        font-weight: 700;
+        margin: 0;
+        color: var(--ink-900);
+    }
+    .division-card .card-header .header-actions {
+        display: flex;
+        gap: 4px;
+    }
+    .division-card .card-body {
+        padding: 16px 18px;
+        flex: 1;
+    }
+    .division-card .card-footer {
+        background: var(--ink-50);
+        border-top: 1px solid var(--ink-200);
+        padding: 10px 18px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 12px;
+    }
+
+    .division-meta-row {
+        display: flex;
+        justify-content: space-between;
+        font-size: 12px;
+        color: var(--ink-600);
+        margin-bottom: 12px;
+    }
+
+    .progress {
+        height: 6px;
+        background: var(--ink-100);
+        border-radius: 999px;
+        overflow: hidden;
+    }
+    .progress-bar { background: var(--unmc-red); border-radius: 999px; }
+    .progress-bar.bg-success { background: var(--success) !important; }
+
+    .form-select {
+        font-size: 13px;
+        padding: 6px 10px;
+    }
+
+    .small-link-btn {
+        background: transparent;
+        border: 1px solid var(--ink-300);
+        color: var(--ink-700);
+        padding: 4px 8px;
+        border-radius: var(--r-md);
+        font-size: 12px;
+        text-decoration: none;
+    }
+    .small-link-btn:hover {
+        background: var(--ink-50);
+        color: var(--ink-900);
+        border-color: var(--ink-400);
+    }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="container py-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h2><i class="bi bi-diagram-3"></i> Divisions</h2>
-            <p class="text-muted mb-0">Manage divisions, assign chiefs, and view faculty</p>
-        </div>
-        <div>
-            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addDivisionModal">
-                <i class="bi bi-plus-lg"></i> Add Division
-            </button>
-            <a href="{% url 'index' %}" class="btn btn-outline-secondary ms-2">
-                <i class="bi bi-arrow-left"></i> Dashboard
-            </a>
-        </div>
+<div class="page-header">
+    <div>
+        <div class="page-eyebrow">Configuration</div>
+        <h1>Divisions</h1>
+        <div class="page-subtitle">Manage divisions, assign chiefs, and view faculty.</div>
     </div>
+    <div class="page-actions">
+        <a href="{% url 'index' %}" class="u-btn u-btn--secondary u-btn--sm">
+            <i class="bi bi-arrow-left"></i> Dashboard
+        </a>
+        <button class="u-btn u-btn--primary u-btn--sm" data-bs-toggle="modal" data-bs-target="#addDivisionModal">
+            <i class="bi bi-plus-lg"></i> Add division
+        </button>
+    </div>
+</div>
 
-    <div class="row">
-        {% for item in divisions %}
-        <div class="col-md-6 col-lg-4 mb-4">
-            <div class="card h-100">
-                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">{{ item.division.name }}</h5>
-                    <div class="d-flex gap-1">
-                        <a href="{% url 'division_dashboard' code=item.division.code %}" class="btn btn-sm btn-outline-light" title="Dashboard">
-                            <i class="bi bi-speedometer2"></i>
-                        </a>
-                        <div class="dropdown">
-                            <button class="btn btn-sm btn-outline-light" type="button" data-bs-toggle="dropdown">
-                                <i class="bi bi-three-dots-vertical"></i>
+<div class="row">
+    {% for item in divisions %}
+    <div class="col-md-6 col-lg-4 mb-3">
+        <div class="division-card">
+            <div class="card-header">
+                <h5>{{ item.division.name }}</h5>
+                <div class="header-actions">
+                    <a href="{% url 'division_dashboard' code=item.division.code %}" class="small-link-btn" title="Dashboard">
+                        <i class="bi bi-speedometer2"></i>
+                    </a>
+                    <div class="dropdown">
+                        <button class="small-link-btn" type="button" data-bs-toggle="dropdown">
+                            <i class="bi bi-three-dots-vertical"></i>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end" style="font-size: 13px;">
+                            <li>
+                                <a class="dropdown-item" href="#" data-bs-toggle="modal"
+                                   data-bs-target="#editModal{{ item.division.code }}">
+                                    <i class="bi bi-pencil"></i> Edit name
+                                </a>
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <a class="dropdown-item" href="#" data-bs-toggle="modal" style="color: var(--unmc-red);"
+                                   data-bs-target="#deleteModal{{ item.division.code }}">
+                                    <i class="bi bi-trash"></i> Delete
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label" style="font-size:11px; text-transform:uppercase; letter-spacing:0.08em; color: var(--ink-600); margin-bottom:6px; display:block;">Division Chief</label>
+                    <form method="post" action="{% url 'division_update_chief' code=item.division.code %}">
+                        {% csrf_token %}
+                        <select name="chief_email" class="form-select" onchange="this.form.submit()">
+                            <option value="">— No chief assigned —</option>
+                            {% for faculty in item.faculty_list %}
+                            <option value="{{ faculty.email }}"
+                                    {% if item.division.chief and item.division.chief.email == faculty.email %}selected{% endif %}>
+                                {{ faculty.display_name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </form>
+                </div>
+
+                <div class="division-meta-row">
+                    <span><i class="bi bi-people"></i> {{ item.faculty_count }} Faculty</span>
+                    <span><i class="bi bi-award"></i> {{ item.avc_eligible_count }} AVC Eligible</span>
+                </div>
+
+                {% if academic_year.review_mode_enabled and item.faculty_with_data > 0 %}
+                <div style="border-top: 1px solid var(--ink-200); padding-top: 12px;">
+                    <div style="display:flex; justify-content: space-between; font-size: 11px; color: var(--ink-600); margin-bottom: 6px;">
+                        <span>Review progress (AY {{ academic_year.year_code }})</span>
+                        <span class="mono" style="font-family: var(--font-mono);">{{ item.verified_faculty_count }}/{{ item.faculty_with_data }}</span>
+                    </div>
+                    <div class="progress">
+                        {% widthratio item.verified_faculty_count item.faculty_with_data 100 as progress %}
+                        <div class="progress-bar {% if item.all_faculty_verified %}bg-success{% endif %}"
+                             style="width: {{ progress }}%; height: 100%;"></div>
+                    </div>
+                    {% if item.verification %}
+                    <div style="margin-top: 8px;">
+                        <span class="badge bg-success">
+                            <i class="bi bi-check-circle-fill"></i> Verified
+                        </span>
+                        <span style="color: var(--ink-600); font-size: 11px; margin-left: 4px;">{{ item.verification.verified_at|date:"M j" }}</span>
+                    </div>
+                    {% elif item.all_faculty_verified %}
+                    <div style="margin-top: 8px;">
+                        <span class="badge bg-info">
+                            <i class="bi bi-check2-all"></i> All faculty verified
+                        </span>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+            <div class="card-footer">
+                {% if item.division.chief %}
+                <span style="color: var(--success);">
+                    <i class="bi bi-person-check"></i>
+                    {{ item.division.chief.display_name }}
+                </span>
+                {% else %}
+                <span style="color: var(--warning);">
+                    <i class="bi bi-person-x"></i>
+                    No chief assigned
+                </span>
+                {% endif %}
+                <span style="color: var(--ink-600);">Code: <code style="font-family: var(--font-mono); font-size: 11px;">{{ item.division.code }}</code></span>
+            </div>
+        </div>
+
+        <!-- Edit Modal -->
+        <div class="modal fade" id="editModal{{ item.division.code }}" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <form method="post" action="{% url 'division_edit' code=item.division.code %}">
+                        {% csrf_token %}
+                        <div class="modal-header">
+                            <h5 class="modal-title">Edit division</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="mb-3">
+                                <label class="form-label">Division name</label>
+                                <input type="text" name="name" class="form-control"
+                                       value="{{ item.division.name }}" required>
+                            </div>
+                            <p style="color: var(--ink-600); font-size: 12px; margin-bottom: 0;">
+                                Code: <code style="font-family: var(--font-mono);">{{ item.division.code }}</code> (cannot be changed)
+                            </p>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn btn-primary">Save changes</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Delete Modal -->
+        <div class="modal fade" id="deleteModal{{ item.division.code }}" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <form method="post" action="{% url 'division_delete' code=item.division.code %}">
+                        {% csrf_token %}
+                        <div class="modal-header">
+                            <h5 class="modal-title" style="color: var(--unmc-red);">Delete division</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <p>Are you sure you want to delete <strong>{{ item.division.name }}</strong>?</p>
+                            {% if item.faculty_count > 0 %}
+                            <div class="alert alert-warning">
+                                <i class="bi bi-exclamation-triangle"></i>
+                                This division has {{ item.faculty_count }} faculty members assigned.
+                                You must reassign them before deleting.
+                            </div>
+                            {% else %}
+                            <p style="color: var(--ink-600); font-size: 12px;">This action cannot be undone.</p>
+                            {% endif %}
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn btn-danger" {% if item.faculty_count > 0 %}disabled{% endif %}>
+                                Delete division
                             </button>
-                            <ul class="dropdown-menu dropdown-menu-end">
-                                <li>
-                                    <a class="dropdown-item" href="#" data-bs-toggle="modal"
-                                       data-bs-target="#editModal{{ item.division.code }}">
-                                        <i class="bi bi-pencil"></i> Edit Name
-                                    </a>
-                                </li>
-                                <li><hr class="dropdown-divider"></li>
-                                <li>
-                                    <a class="dropdown-item text-danger" href="#" data-bs-toggle="modal"
-                                       data-bs-target="#deleteModal{{ item.division.code }}">
-                                        <i class="bi bi-trash"></i> Delete
-                                    </a>
-                                </li>
-                            </ul>
                         </div>
-                    </div>
-                </div>
-                <div class="card-body">
-                    <div class="mb-3">
-                        <label class="form-label text-muted small">Division Chief</label>
-                        <form method="post" action="{% url 'division_update_chief' code=item.division.code %}">
-                            {% csrf_token %}
-                            <div class="input-group">
-                                <select name="chief_email" class="form-select" onchange="this.form.submit()">
-                                    <option value="">-- No Chief Assigned --</option>
-                                    {% for faculty in item.faculty_list %}
-                                    <option value="{{ faculty.email }}"
-                                            {% if item.division.chief and item.division.chief.email == faculty.email %}selected{% endif %}>
-                                        {{ faculty.display_name }}
-                                    </option>
-                                    {% endfor %}
-                                </select>
-                            </div>
-                        </form>
-                    </div>
-
-                    <div class="d-flex justify-content-between text-muted small mb-3">
-                        <span><i class="bi bi-people"></i> {{ item.faculty_count }} Faculty</span>
-                        <span><i class="bi bi-award"></i> {{ item.avc_eligible_count }} AVC Eligible</span>
-                    </div>
-
-                    <!-- Verification Status -->
-                    {% if academic_year.review_mode_enabled and item.faculty_with_data > 0 %}
-                    <div class="border-top pt-3">
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                            <span class="small text-muted">Review Progress (AY {{ academic_year.year_code }})</span>
-                            <span class="small">{{ item.verified_faculty_count }}/{{ item.faculty_with_data }}</span>
-                        </div>
-                        <div class="progress" style="height: 8px;">
-                            {% widthratio item.verified_faculty_count item.faculty_with_data 100 as progress %}
-                            <div class="progress-bar {% if item.all_faculty_verified %}bg-success{% else %}bg-primary{% endif %}"
-                                 style="width: {{ progress }}%"></div>
-                        </div>
-                        {% if item.verification %}
-                        <div class="mt-2">
-                            <span class="badge bg-success">
-                                <i class="bi bi-check-circle-fill"></i> Division Verified
-                            </span>
-                            <small class="text-muted ms-1">{{ item.verification.verified_at|date:"M j" }}</small>
-                        </div>
-                        {% elif item.all_faculty_verified %}
-                        <div class="mt-2">
-                            <span class="badge bg-info">
-                                <i class="bi bi-check2-all"></i> All Faculty Verified
-                            </span>
-                        </div>
-                        {% endif %}
-                    </div>
-                    {% endif %}
-                </div>
-                <div class="card-footer bg-light d-flex justify-content-between align-items-center">
-                    {% if item.division.chief %}
-                    <small class="text-success">
-                        <i class="bi bi-person-check"></i>
-                        {{ item.division.chief.display_name }}
-                    </small>
-                    {% else %}
-                    <small class="text-warning">
-                        <i class="bi bi-person-x"></i>
-                        No chief assigned
-                    </small>
-                    {% endif %}
-                    <small class="text-muted">Code: {{ item.division.code }}</small>
+                    </form>
                 </div>
             </div>
-
-            <!-- Edit Modal -->
-            <div class="modal fade" id="editModal{{ item.division.code }}" tabindex="-1">
-                <div class="modal-dialog">
-                    <div class="modal-content">
-                        <form method="post" action="{% url 'division_edit' code=item.division.code %}">
-                            {% csrf_token %}
-                            <div class="modal-header">
-                                <h5 class="modal-title">Edit Division</h5>
-                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                            </div>
-                            <div class="modal-body">
-                                <div class="mb-3">
-                                    <label class="form-label">Division Name</label>
-                                    <input type="text" name="name" class="form-control"
-                                           value="{{ item.division.name }}" required>
-                                </div>
-                                <p class="text-muted small mb-0">
-                                    Code: <code>{{ item.division.code }}</code> (cannot be changed)
-                                </p>
-                            </div>
-                            <div class="modal-footer">
-                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                <button type="submit" class="btn btn-primary">Save Changes</button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Delete Modal -->
-            <div class="modal fade" id="deleteModal{{ item.division.code }}" tabindex="-1">
-                <div class="modal-dialog">
-                    <div class="modal-content">
-                        <form method="post" action="{% url 'division_delete' code=item.division.code %}">
-                            {% csrf_token %}
-                            <div class="modal-header">
-                                <h5 class="modal-title text-danger">Delete Division</h5>
-                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                            </div>
-                            <div class="modal-body">
-                                <p>Are you sure you want to delete <strong>{{ item.division.name }}</strong>?</p>
-                                {% if item.faculty_count > 0 %}
-                                <div class="alert alert-warning">
-                                    <i class="bi bi-exclamation-triangle"></i>
-                                    This division has {{ item.faculty_count }} faculty members assigned.
-                                    You must reassign them before deleting.
-                                </div>
-                                {% else %}
-                                <p class="text-muted">This action cannot be undone.</p>
-                                {% endif %}
-                            </div>
-                            <div class="modal-footer">
-                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                <button type="submit" class="btn btn-danger" {% if item.faculty_count > 0 %}disabled{% endif %}>
-                                    Delete Division
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            </div>
-        </div>
-        {% empty %}
-        <div class="col-12">
-            <div class="alert alert-info">
-                No divisions configured. Click "Add Division" to create one.
-            </div>
-        </div>
-        {% endfor %}
-    </div>
-
-    <div class="card mt-4">
-        <div class="card-header">
-            <h5 class="mb-0"><i class="bi bi-info-circle"></i> About Divisions</h5>
-        </div>
-        <div class="card-body">
-            <p class="mb-0">
-                Divisions organize faculty into groups. Each division can have a chief who can view
-                a personalized dashboard showing only their faculty members' activities and survey responses.
-                Faculty are assigned to divisions on their profile page.
-            </p>
         </div>
     </div>
+    {% empty %}
+    <div class="col-12">
+        <div class="alert alert-info">
+            No divisions configured. Click "Add division" to create one.
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<div class="card mt-4" style="padding: 20px;">
+    <h3 style="font-size: 14px; margin-bottom: 6px; color: var(--ink-900);"><i class="bi bi-info-circle"></i> About divisions</h3>
+    <p style="margin: 0; color: var(--ink-700);">
+        Divisions organize faculty into groups. Each division can have a chief who can view
+        a personalized dashboard showing only their faculty members' activities and survey responses.
+        Faculty are assigned to divisions on their profile page.
+    </p>
 </div>
 
 <!-- Add Division Modal -->
@@ -213,28 +290,28 @@
             <form method="post" action="{% url 'division_create' %}">
                 {% csrf_token %}
                 <div class="modal-header">
-                    <h5 class="modal-title"><i class="bi bi-plus-lg"></i> Add Division</h5>
+                    <h5 class="modal-title"><i class="bi bi-plus-lg"></i> Add division</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
                     <div class="mb-3">
-                        <label class="form-label">Division Name</label>
+                        <label class="form-label">Division name</label>
                         <input type="text" name="name" class="form-control"
                                placeholder="e.g., Cardiac" required>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Division Code</label>
+                        <label class="form-label">Division code</label>
                         <input type="text" name="code" class="form-control"
                                placeholder="e.g., cardiac" required
                                pattern="[a-z0-9_]+" title="Lowercase letters, numbers, and underscores only">
-                        <div class="form-text">
+                        <div class="form-text" style="font-size: 12px; color: var(--ink-600);">
                             Lowercase letters, numbers, and underscores only. Used internally.
                         </div>
                     </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Create Division</button>
+                    <button type="submit" class="btn btn-primary">Create division</button>
                 </div>
             </form>
         </div>

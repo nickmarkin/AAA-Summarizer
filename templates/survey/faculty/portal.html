@@ -4,409 +4,664 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Survey Portal - UNMC Anesthesiology</title>
+    <title>My Survey Portal — UNMC Anesthesiology</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="{% static 'css/unmc-tokens.css' %}" rel="stylesheet">
     <style>
+        * { box-sizing: border-box; }
+
         body {
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-            min-height: 100vh;
-            padding: 40px 20px;
+            margin: 0;
+            font-family: var(--font-sans);
+            color: var(--ink-800);
+            background: var(--ink-50);
+            font-size: 14px;
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
         }
-        .portal-container {
-            max-width: 800px;
+
+        h1, h2, h3, h4, h5, h6 {
+            font-family: var(--font-display);
+            color: var(--ink-900);
+            margin: 0;
+            line-height: 1.2;
+            letter-spacing: -0.01em;
+            font-weight: 700;
+        }
+
+        a { color: var(--unmc-red); text-decoration: none; }
+        a:hover { color: var(--unmc-red-dark); }
+
+        .util-bar {
+            background: var(--paper);
+            border-bottom: 1px solid var(--ink-200);
+            padding: 12px 24px;
+        }
+        .util-bar-inner {
+            max-width: 920px;
             margin: 0 auto;
-        }
-        .portal-header {
-            background: white;
-            border-radius: 16px 16px 0 0;
-            padding: 30px;
-            text-align: center;
-            border-bottom: 3px solid #0d6efd;
-        }
-        /* Desktop header layout */
-        .header-desktop {
             display: flex;
             align-items: center;
-        }
-        .header-desktop .header-logo {
-            flex: 0 0 80px;
-        }
-        .header-desktop .header-logo img {
-            height: 60px;
-            width: auto;
-        }
-        .header-desktop .header-text {
-            flex: 1;
-            text-align: center;
-        }
-        .header-desktop .header-spacer {
-            flex: 0 0 80px;
-        }
-        .header-mobile {
-            display: none;
-        }
-        /* Mobile header layout */
-        @media (max-width: 576px) {
-            .header-desktop {
-                display: none;
-            }
-            .header-mobile {
-                display: block;
-            }
-            .header-mobile-row {
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                gap: 15px;
-            }
-            .header-mobile-row img {
-                height: 45px;
-                width: auto;
-            }
-            .header-mobile-row h3 {
-                font-size: 1.25rem;
-            }
-            .header-mobile h5 {
-                font-size: 0.9rem;
-            }
-        }
-        .portal-body {
-            background: white;
-            padding: 30px;
-        }
-        .portal-footer {
-            background: #f8f9fa;
-            border-radius: 0 0 16px 16px;
-            padding: 20px 30px;
-            text-align: center;
-        }
-                .current-survey-card {
-            border: 2px solid #0d6efd;
-            border-radius: 12px;
-            padding: 25px;
-            margin-bottom: 25px;
-            background: #f0f7ff;
-        }
-        .past-survey-item {
-            padding: 15px;
-            border-bottom: 1px solid #eee;
-            display: flex;
             justify-content: space-between;
+            gap: 16px;
+        }
+        .util-brand {
+            display: flex;
             align-items: center;
+            gap: 12px;
         }
-        .past-survey-item:last-child {
-            border-bottom: none;
+        .util-brand img { height: 32px; width: auto; }
+        .util-brand-text { line-height: 1.2; }
+        .util-brand-name {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--ink-900);
         }
-        .status-badge {
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 12px;
+        .util-brand-sub {
+            font-size: 10px;
+            color: var(--ink-600);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+        .util-meta {
+            text-align: right;
+            line-height: 1.2;
+        }
+        .util-meta .name {
+            font-size: 13px;
             font-weight: 600;
+            color: var(--ink-900);
         }
-        .status-submitted {
-            background: #d4edda;
-            color: #155724;
+        .util-meta .role {
+            font-size: 11px;
+            color: var(--ink-600);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
         }
-        .status-pending {
-            background: #fff3cd;
-            color: #856404;
+
+        .container-portal {
+            max-width: 920px;
+            margin: 0 auto;
+            padding: 32px 24px 64px;
         }
-        .status-in_progress {
-            background: #cce5ff;
-            color: #004085;
+
+        /* Hero banner */
+        .hero {
+            background: var(--unmc-red-tint-2);
+            border-radius: var(--r-xl);
+            padding: 32px;
+            margin-bottom: 24px;
+            position: relative;
         }
-                .activity-section {
-            margin-bottom: 20px;
-        }
-        .activity-section-header {
-            background: #34495e;
-            color: white;
-            padding: 10px 15px;
-            border-radius: 8px 8px 0 0;
+        .hero-grid {
             display: flex;
             justify-content: space-between;
+            align-items: flex-start;
+            gap: 24px;
+            flex-wrap: wrap;
         }
-        .activity-section-body {
-            border: 1px solid #ddd;
-            border-top: none;
-            border-radius: 0 0 8px 8px;
-            padding: 15px;
-            background: #fafafa;
-        }
-        .activity-subcat {
-            margin-bottom: 12px;
-        }
-        .activity-subcat:last-child {
-            margin-bottom: 0;
-        }
-        .activity-subcat-title {
+        .hero-left { flex: 1 1 360px; }
+        .hero-eyebrow {
+            font-size: 11px;
             font-weight: 500;
-            color: #2c3e50;
-            border-bottom: 1px solid #ddd;
-            padding-bottom: 5px;
+            color: var(--unmc-red);
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
             margin-bottom: 8px;
         }
-        .activity-item-wrapper {
-            border-bottom: 1px solid #eee;
+        .hero h1 {
+            font-size: 32px;
+            color: var(--ink-900);
+            margin: 0 0 8px 0;
         }
-        .activity-item-wrapper:last-child {
-            border-bottom: none;
+        .hero-sub {
+            color: var(--ink-700);
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
         }
-        .activity-item {
-            padding: 8px 10px;
+        .hero-right {
+            text-align: right;
+            flex: 0 0 auto;
+            min-width: 200px;
+        }
+        .hero-total-label {
+            font-size: 11px;
+            font-weight: 500;
+            color: var(--ink-600);
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            margin-bottom: 4px;
+        }
+        .hero-total {
+            font-size: 56px;
+            font-weight: 700;
+            color: var(--ink-900);
+            line-height: 1;
+            font-family: var(--font-display);
+            letter-spacing: -0.02em;
+        }
+        .hero-total .pts {
+            font-size: 18px;
+            font-weight: 500;
+            color: var(--ink-600);
+            margin-left: 4px;
+        }
+        .hero-bars {
+            display: flex;
+            gap: 4px;
+            margin-top: 12px;
+            justify-content: flex-end;
+            flex-wrap: wrap;
+        }
+        .hero-bar {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 10px;
+            color: var(--ink-700);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+        }
+        .hero-bar .swatch {
+            width: 10px; height: 10px; border-radius: 2px;
+            background: var(--unmc-red);
+        }
+
+        @media (max-width: 640px) {
+            .hero-grid { flex-direction: column; }
+            .hero-right { text-align: left; }
+            .hero-bars { justify-content: flex-start; }
+            .hero-total { font-size: 44px; }
+        }
+
+        /* Cards */
+        .card-block {
+            background: var(--paper);
+            border: 1px solid var(--ink-200);
+            border-radius: var(--r-lg);
+            box-shadow: var(--shadow-sm);
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+        .card-block h2 {
+            font-size: 18px;
+            margin-bottom: 4px;
+        }
+        .card-block-sub {
+            font-size: 13px;
+            color: var(--ink-600);
+            margin-bottom: 16px;
+        }
+
+        /* Active survey row */
+        .survey-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            padding: 16px 0;
+            border-bottom: 1px solid var(--ink-200);
+            flex-wrap: wrap;
+        }
+        .survey-row:first-of-type { padding-top: 0; }
+        .survey-row:last-child { border-bottom: 0; padding-bottom: 0; }
+        .survey-row-meta { flex: 1 1 240px; }
+        .survey-quarter {
+            font-size: 11px;
+            font-weight: 500;
+            color: var(--ink-600);
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            margin-bottom: 4px;
+        }
+        .survey-row-title {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--ink-900);
+            margin-bottom: 4px;
+        }
+        .survey-row-deadline {
+            font-size: 12px;
+            color: var(--ink-600);
+        }
+        .survey-row-action {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        /* Activity summary 6-col grid */
+        .activity-summary {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 8px;
+        }
+        @media (max-width: 700px) {
+            .activity-summary { grid-template-columns: repeat(2, 1fr); }
+        }
+        .as-tile {
+            background: var(--ink-50);
+            border: 1px solid var(--ink-200);
+            border-radius: var(--r-md);
+            padding: 14px;
+        }
+        .as-tile .as-name {
+            font-size: 11px;
+            font-weight: 500;
+            color: var(--ink-600);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin-bottom: 6px;
+        }
+        .as-tile .as-pts {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--ink-900);
+            font-family: var(--font-display);
+            line-height: 1;
+        }
+
+        /* Past submissions */
+        .past-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--ink-200);
+            gap: 12px;
+        }
+        .past-row:last-child { border-bottom: 0; }
+        .past-meta { flex: 1; }
+        .past-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--ink-900);
+        }
+        .past-sub {
+            font-size: 12px;
+            color: var(--ink-600);
+            margin-top: 2px;
+        }
+
+        /* Activities sections (collapsible) */
+        .act-section {
+            border: 1px solid var(--ink-200);
+            border-radius: var(--r-lg);
+            margin-bottom: 12px;
+            overflow: hidden;
+            background: var(--paper);
+        }
+        .act-section-header {
+            background: var(--ink-50);
+            padding: 14px 18px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            user-select: none;
+            border-bottom: 1px solid var(--ink-200);
+        }
+        .act-section-header:hover { background: var(--ink-100); }
+        .act-section-name {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--ink-800);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+        .act-section-total {
+            font-family: var(--font-mono);
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--ink-700);
+        }
+        .act-section-body { padding: 16px 18px; }
+        .act-subcat { margin-bottom: 12px; }
+        .act-subcat:last-child { margin-bottom: 0; }
+        .act-subcat-title {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--ink-600);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            padding-bottom: 6px;
+            border-bottom: 1px solid var(--ink-200);
+            margin-bottom: 6px;
+        }
+        .act-item {
+            padding: 8px 4px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            font-size: 14px;
             cursor: pointer;
+            border-radius: var(--r-sm);
         }
-        .activity-item:hover {
-            background: #f0f0f0;
-        }
-        .activity-item .chevron {
-            transition: transform 0.2s ease;
-            color: #6c757d;
+        .act-item:hover { background: var(--ink-50); }
+        .act-item .chevron {
+            color: var(--ink-500);
             margin-right: 8px;
+            transition: transform 120ms ease;
             display: inline-block;
         }
-        .activity-item.expanded .chevron {
-            transform: rotate(90deg);
-        }
-        .activity-points {
-            background: #27ae60;
-            color: white;
-            padding: 2px 8px;
-            border-radius: 4px;
-            font-weight: 500;
+        .act-item.expanded .chevron { transform: rotate(90deg); }
+        .act-item-points {
+            font-family: var(--font-mono);
             font-size: 12px;
+            color: var(--success);
+            font-weight: 600;
         }
-        .activity-details {
-            background: #fff;
-            padding: 10px 15px 10px 30px;
-            font-size: 13px;
-            border-top: 1px dashed #ddd;
+        .act-details {
+            padding: 10px 14px;
+            background: var(--ink-50);
+            font-size: 12px;
+            border-radius: var(--r-sm);
+            margin: 4px 0 8px 24px;
         }
-        .activity-details dt {
-            color: #666;
-            font-weight: normal;
-            width: 120px;
-            float: left;
-            clear: left;
+        .act-details dl { margin: 0; display: grid; grid-template-columns: 110px 1fr; row-gap: 4px; }
+        .act-details dt { color: var(--ink-600); font-weight: 500; }
+        .act-details dd { margin: 0; color: var(--ink-800); }
+
+        /* Division chief block */
+        .chief-card {
+            background: var(--paper);
+            border: 1px solid var(--ink-200);
+            border-radius: var(--r-lg);
+            padding: 20px 24px;
+            margin-bottom: 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: wrap;
         }
-        .activity-details dd {
-            margin-left: 130px;
+        .chief-eyebrow {
+            font-size: 11px;
+            font-weight: 500;
+            color: var(--ink-600);
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
             margin-bottom: 4px;
         }
+        .chief-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--ink-900);
+            margin-bottom: 4px;
+        }
+        .chief-desc {
+            font-size: 13px;
+            color: var(--ink-700);
+            margin: 0;
+        }
+
+        /* Status badges */
+        .u-badge.is-success { background: var(--success-tint); color: #1B5E20; border-color: #C8E2CA; }
+        .u-badge.is-warning { background: var(--warning-tint); color: #7A4A00; border-color: #F3DDB3; }
+        .u-badge.is-info { background: var(--info-tint); color: #0D3F99; border-color: #CCDAF6; }
+        .u-badge.is-neutral { background: var(--ink-100); color: var(--ink-700); border-color: var(--ink-200); }
+
+        /* Footer */
+        .portal-foot {
+            text-align: center;
+            color: var(--ink-600);
+            font-size: 12px;
+            padding: 24px 0 12px;
+            margin-top: 24px;
+            border-top: 1px solid var(--ink-200);
+        }
+        .portal-foot p { margin: 4px 0; }
     </style>
 </head>
 <body>
-    <div class="portal-container">
-        <div class="portal-header">
-            <!-- Desktop layout -->
-            <div class="header-desktop">
-                <div class="header-logo">
-                    <img src="{% static 'images/unmc-logo.png' %}" alt="UNMC">
-                </div>
-                <div class="header-text">
-                    <h5 class="mb-2" style="color: #666;">Dept. of Anesthesiology Academic Activity Survey</h5>
-                    <h3 class="mb-0">Dr. {{ faculty.first_name }} {{ faculty.last_name }}</h3>
-                </div>
-                <div class="header-spacer"></div>
-            </div>
-            <!-- Mobile layout -->
-            <div class="header-mobile">
-                <h5 class="mb-3" style="color: #666;">Dept. of Anesthesiology Academic Activity Survey</h5>
-                <div class="header-mobile-row">
-                    <img src="{% static 'images/unmc-logo.png' %}" alt="UNMC">
-                    <h3 class="mb-0">Dr. {{ faculty.first_name }} {{ faculty.last_name }}</h3>
-                </div>
+
+<!-- Top utility bar -->
+<div class="util-bar">
+    <div class="util-bar-inner">
+        <div class="util-brand">
+            <img src="{% static 'images/unmc-logo.png' %}" alt="UNMC">
+            <div class="util-brand-text">
+                <div class="util-brand-name">Anesthesiology &middot; Academic Achievement</div>
+                <div class="util-brand-sub">Faculty Portal &middot; AY {{ academic_year.year_code }}</div>
             </div>
         </div>
-
-        <div class="portal-body">
-            <!-- Division Chief Dashboard Link -->
-            {% if divisions_led %}
-            <div class="alert alert-info mb-4" style="background: #e8f4fd; border: 1px solid #b8daff;">
-                <h6 class="mb-2">
-                    <i class="bi bi-people-fill text-primary"></i>
-                    Division Chief Dashboard
-                </h6>
-                <p class="mb-2 small">As a division chief, you can view your division's faculty data{% if review_mode_enabled %} and review activities{% endif %}:</p>
-                {% for division in divisions_led %}
-                <a href="{% url 'division_dashboard' code=division.code %}" class="btn btn-primary btn-sm me-2 mb-1">
-                    <i class="bi bi-bar-chart"></i> {{ division.name }} Dashboard
-                </a>
-                {% endfor %}
-                {% if review_mode_enabled %}
-                <div class="mt-2 small text-success">
-                    <i class="bi bi-shield-check"></i> Review mode is enabled - you can verify faculty activities.
-                </div>
-                {% endif %}
-            </div>
-            {% endif %}
-
-            <!-- Open Surveys - show all currently open surveys -->
-            {% if open_surveys %}
-            {% for survey in open_surveys %}
-            <div class="current-survey-card {% if not forloop.last %}mb-3{% endif %}">
-                <h5 class="mb-3">
-                    <i class="bi bi-clipboard-check text-primary"></i>
-                    {{ survey.campaign.name }}
-                </h5>
-
-                {% if survey.invitation.status == 'submitted' %}
-                <div class="alert alert-success mb-3">
-                    <i class="bi bi-check-circle"></i>
-                    <strong>Submitted</strong> on {{ survey.invitation.submitted_at|date:"M j, Y" }}
-                    - You can still make changes until {{ survey.campaign.closes_at|date:"M j, Y" }}
-                </div>
-                {% elif survey.invitation.status == 'in_progress' %}
-                <div class="alert alert-info mb-3">
-                    <i class="bi bi-pencil"></i>
-                    <strong>In Progress</strong> - Continue where you left off
-                </div>
-                {% else %}
-                <div class="alert alert-warning mb-3">
-                    <i class="bi bi-hourglass"></i>
-                    <strong>Not Started</strong> - Begin your survey below
-                </div>
-                {% endif %}
-
-                <div class="text-center">
-                    <small class="text-muted d-block mb-2">Deadline: {{ survey.campaign.closes_at|date:"F j, Y" }}</small>
-                    <a href="{% url 'survey:survey_landing' token=survey.invitation.token %}" class="btn btn-primary btn-lg">
-                        {% if survey.invitation.status == 'submitted' %}
-                            <i class="bi bi-pencil"></i> Edit Survey
-                        {% elif survey.invitation.status == 'in_progress' %}
-                            <i class="bi bi-arrow-right"></i> Continue
-                        {% else %}
-                            <i class="bi bi-play-fill"></i> Start Survey
-                        {% endif %}
-                    </a>
-                </div>
-            </div>
-            {% endfor %}
-            {% else %}
-            <div class="alert alert-secondary mb-4">
-                <i class="bi bi-info-circle"></i>
-                <strong>No open surveys</strong> - There are no surveys available for you at this time.
-            </div>
-            {% endif %}
-
-            <!-- Past Submissions -->
-            <h5 class="mb-3"><i class="bi bi-clock-history"></i> Past Submissions (AY {{ academic_year.year_code }})</h5>
-
-            {% if past_submissions %}
-            <div class="card mb-4">
-                <div class="card-body p-0">
-                    {% for inv in past_submissions %}
-                    <div class="past-survey-item">
-                        <div>
-                            <strong>{{ inv.campaign.name }}</strong>
-                            <br>
-                            <small class="text-muted">Submitted {{ inv.submitted_at|date:"M j, Y" }}</small>
-                        </div>
-                        <div class="text-end">
-                            <span class="status-badge status-submitted">Submitted</span>
-                            {% if inv.response %}
-                            <div class="small text-muted mt-1">{{ inv.response.total_points }} pts</div>
-                            {% endif %}
-                        </div>
-                    </div>
-                    {% endfor %}
-                </div>
-            </div>
-            {% else %}
-            <p class="text-muted mb-4">No past submissions for this academic year.</p>
-            {% endif %}
-
-            <!-- Activity Details (Read-Only) -->
-            {% if activity_sections %}
-            <h5 class="mb-3"><i class="bi bi-list-check"></i> My Activities (AY {{ academic_year.year_code }})</h5>
-            {% for section in activity_sections %}
-            <div class="activity-section">
-                <div class="activity-section-header">
-                    <span>{{ section.name }}</span>
-                    <span>{{ section.total }} pts</span>
-                </div>
-                <div class="activity-section-body">
-                    {% for subcat_name, entries in section.subcategories.items %}
-                    <div class="activity-subcat">
-                        <div class="activity-subcat-title">{{ subcat_name }} ({{ entries|length }})</div>
-                        {% for entry in entries %}
-                        {% with detail_id=forloop.counter|stringformat:"s" %}
-                        {% with parent_id=forloop.parentloop.counter|stringformat:"s" %}
-                        {% with section_id=forloop.parentloop.parentloop.counter|stringformat:"s" %}
-                        <div class="activity-item-wrapper">
-                            <div class="activity-item" data-bs-toggle="collapse" data-bs-target="#detail-{{ section_id }}-{{ parent_id }}-{{ detail_id }}" aria-expanded="false">
-                                <div>
-                                    <i class="bi bi-chevron-right chevron"></i>
-                                    {% firstof entry.type entry.title entry.name entry.rotations "Activity" %}
-                                    {% if entry.role %}<span class="text-muted"> - {{ entry.role }}</span>{% endif %}
-                                </div>
-                                <span class="activity-points">{{ entry.points|default:0 }}</span>
-                            </div>
-                            <div class="collapse" id="detail-{{ section_id }}-{{ parent_id }}-{{ detail_id }}">
-                                <div class="activity-details">
-                                    <dl class="mb-0">
-                                        {% if entry.type %}<dt>Type</dt><dd>{{ entry.type }}</dd>{% endif %}
-                                        {% if entry.title %}<dt>Title</dt><dd>{{ entry.title }}</dd>{% endif %}
-                                        {% if entry.name %}<dt>Name</dt><dd>{{ entry.name }}</dd>{% endif %}
-                                        {% if entry.role %}<dt>Role</dt><dd>{{ entry.role }}</dd>{% endif %}
-                                        {% if entry.date %}<dt>Date</dt><dd>{{ entry.date }}</dd>{% endif %}
-                                        {% if entry.committee %}<dt>Committee</dt><dd>{{ entry.committee }}</dd>{% endif %}
-                                        {% if entry.pathway %}<dt>Pathway</dt><dd>{{ entry.pathway }}</dd>{% endif %}
-                                        {% if entry.conference %}<dt>Conference</dt><dd>{{ entry.conference }}</dd>{% endif %}
-                                        {% if entry.journal %}<dt>Journal</dt><dd>{{ entry.journal }}</dd>{% endif %}
-                                        {% if entry.society %}<dt>Society</dt><dd>{{ entry.society }}</dd>{% endif %}
-                                        {% if entry.trainee %}<dt>Trainee</dt><dd>{{ entry.trainee }}</dd>{% endif %}
-                                        {% if entry.student %}<dt>Student</dt><dd>{{ entry.student }}</dd>{% endif %}
-                                        {% if entry.rotations %}<dt>Rotations</dt><dd>{{ entry.rotations }}</dd>{% endif %}
-                                        {% if entry.award %}<dt>Award</dt><dd>{{ entry.award }}</dd>{% endif %}
-                                        {% if entry.grant %}<dt>Grant</dt><dd>{{ entry.grant }}</dd>{% endif %}
-                                        {% if entry.agency %}<dt>Agency</dt><dd>{{ entry.agency }}</dd>{% endif %}
-                                        {% if entry.amount %}<dt>Amount</dt><dd>{{ entry.amount }}</dd>{% endif %}
-                                        {% if entry.authors %}<dt>Authors</dt><dd>{{ entry.authors }}</dd>{% endif %}
-                                        {% if entry.impact_factor %}<dt>Impact Factor</dt><dd>{{ entry.impact_factor }}</dd>{% endif %}
-                                        {% if entry.chapter %}<dt>Chapter</dt><dd>{{ entry.chapter }}</dd>{% endif %}
-                                        {% if entry.textbook %}<dt>Textbook</dt><dd>{{ entry.textbook }}</dd>{% endif %}
-                                        {% if entry.description %}<dt>Description</dt><dd>{{ entry.description }}</dd>{% endif %}
-                                        {% if entry.source %}<dt>Source</dt><dd>{{ entry.source }}</dd>{% endif %}
-                                    </dl>
-                                </div>
-                            </div>
-                        </div>
-                        {% endwith %}{% endwith %}{% endwith %}
-                        {% endfor %}
-                    </div>
-                    {% endfor %}
-                </div>
-            </div>
-            {% endfor %}
-            {% elif survey_data %}
-            <p class="text-muted">No activities recorded yet.</p>
-            {% endif %}
-        </div>
-
-        <div class="portal-footer">
-            <p class="text-muted small mb-2">
-                <i class="bi bi-bookmark"></i> Bookmark this page - your personal link never changes
-            </p>
-            <p class="text-muted small mb-0">
-                UNMC Department of Anesthesiology | Academic Achievement Survey
-            </p>
+        <div class="util-meta">
+            <div class="name">Dr. {{ faculty.first_name }} {{ faculty.last_name }}</div>
+            <div class="role">{{ faculty.get_rank_display|default:faculty.rank }}{% if faculty.division %} &middot; {{ faculty.division }}{% endif %}</div>
         </div>
     </div>
+</div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        // Rotate chevron when collapse expands/collapses
-        document.querySelectorAll('.activity-item').forEach(function(item) {
-            item.addEventListener('click', function() {
-                this.classList.toggle('expanded');
-            });
-        });
-    </script>
+<div class="container-portal">
+
+    <!-- Hero -->
+    <section class="hero unmc-frames unmc-frames--red">
+        <span class="unmc-frames__corners"></span>
+        <div class="hero-grid">
+            <div class="hero-left">
+                <div class="hero-eyebrow">Welcome back</div>
+                <h1>Dr. {{ faculty.first_name }} {{ faculty.last_name }}</h1>
+                <div class="hero-sub">
+                    {% if faculty.division %}<span>{{ faculty.division }}</span>{% endif %}
+                    {% if faculty.is_avc_eligible %}<span class="u-badge u-badge--red-solid">AVC Eligible</span>{% endif %}
+                    {% if faculty.is_ccc_member %}<span class="u-badge is-neutral">CCC member</span>{% endif %}
+                </div>
+            </div>
+            <div class="hero-right">
+                <div class="hero-total-label">AY {{ academic_year.year_code }} total</div>
+                <div class="hero-total">{{ total_points }}<span class="pts">pts</span></div>
+                {% if survey_total or dept_total %}
+                <div class="hero-bars">
+                    <span class="hero-bar"><span class="swatch" style="background: var(--unmc-red);"></span> Survey {{ survey_total }}</span>
+                    <span class="hero-bar"><span class="swatch" style="background: var(--ink-500);"></span> Dept {{ dept_total }}</span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </section>
+
+    <!-- Division chief block (if applicable) -->
+    {% if divisions_led %}
+    {% for division in divisions_led %}
+    <div class="chief-card">
+        <div style="flex: 1;">
+            <div class="chief-eyebrow">Division leadership</div>
+            <div class="chief-title">{{ division.name }} Division Dashboard</div>
+            <p class="chief-desc">
+                As division chief, you can view your division's faculty data{% if review_mode_enabled %} and verify activities{% endif %}.
+                {% if review_mode_enabled %}<span style="color: var(--success); font-weight: 500;"><i class="bi bi-shield-check"></i> Review mode enabled.</span>{% endif %}
+            </p>
+        </div>
+        <a href="{% url 'division_dashboard' code=division.code %}" class="u-btn u-btn--primary">
+            <i class="bi bi-bar-chart"></i> Open division dashboard
+        </a>
+    </div>
+    {% endfor %}
+    {% endif %}
+
+    <!-- Active surveys -->
+    {% if open_surveys %}
+    <div class="card-block">
+        <h2>Active surveys</h2>
+        <div class="card-block-sub">Open campaigns that need your input.</div>
+        {% for survey in open_surveys %}
+        <div class="survey-row">
+            <div class="survey-row-meta">
+                <div class="survey-quarter">{{ survey.campaign.quarter|default:"Survey" }}</div>
+                <div class="survey-row-title">{{ survey.campaign.name }}</div>
+                <div class="survey-row-deadline">Closes {{ survey.campaign.closes_at|date:"M j, Y" }}</div>
+            </div>
+            <div class="survey-row-action">
+                {% if survey.invitation.status == 'submitted' %}
+                    <span class="u-badge is-success"><i class="bi bi-check-lg"></i> Submitted</span>
+                    <a href="{% url 'survey:survey_landing' token=survey.invitation.token %}" class="u-btn u-btn--ghost">
+                        <i class="bi bi-pencil"></i> Edit response
+                    </a>
+                {% elif survey.invitation.status == 'in_progress' %}
+                    <span class="u-badge is-warning"><i class="bi bi-pencil"></i> In progress</span>
+                    <a href="{% url 'survey:survey_landing' token=survey.invitation.token %}" class="u-btn u-btn--primary">
+                        Continue survey <i class="bi bi-arrow-right"></i>
+                    </a>
+                {% else %}
+                    <span class="u-badge is-neutral">Not started</span>
+                    <a href="{% url 'survey:survey_landing' token=survey.invitation.token %}" class="u-btn u-btn--primary">
+                        Start survey <i class="bi bi-arrow-right"></i>
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="card-block">
+        <h2>Active surveys</h2>
+        <p style="color: var(--ink-600); margin: 0;">
+            <i class="bi bi-info-circle"></i> No surveys are open for you at this time.
+        </p>
+    </div>
+    {% endif %}
+
+    <!-- Activity summary -->
+    {% if category_points %}
+    <div class="card-block">
+        <h2>Activity summary</h2>
+        <div class="card-block-sub">Points by category for AY {{ academic_year.year_code }}.</div>
+        <div class="activity-summary">
+            <div class="as-tile">
+                <div class="as-name">Citizenship</div>
+                <div class="as-pts">{{ category_points.citizenship|default:0 }}</div>
+            </div>
+            <div class="as-tile">
+                <div class="as-name">Education</div>
+                <div class="as-pts">{{ category_points.education|default:0 }}</div>
+            </div>
+            <div class="as-tile">
+                <div class="as-name">Research</div>
+                <div class="as-pts">{{ category_points.research|default:0 }}</div>
+            </div>
+            <div class="as-tile">
+                <div class="as-name">Leadership</div>
+                <div class="as-pts">{{ category_points.leadership|default:0 }}</div>
+            </div>
+            <div class="as-tile">
+                <div class="as-name">Content Expert</div>
+                <div class="as-pts">{{ category_points.content_expert|default:0 }}</div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Past submissions -->
+    {% if past_submissions %}
+    <div class="card-block">
+        <h2>Past submissions</h2>
+        <div class="card-block-sub">AY {{ academic_year.year_code }}.</div>
+        {% for inv in past_submissions %}
+        <div class="past-row">
+            <div class="past-meta">
+                <div class="past-title">{{ inv.campaign.name }}</div>
+                <div class="past-sub">Submitted {{ inv.submitted_at|date:"M j, Y" }}</div>
+            </div>
+            <div style="display:flex; align-items:center; gap:12px;">
+                {% if inv.response %}
+                <span class="mono" style="font-family: var(--font-mono); font-size:13px; color: var(--ink-700);">{{ inv.response.total_points }} pts</span>
+                {% endif %}
+                <span class="u-badge is-success"><i class="bi bi-check-lg"></i> Submitted</span>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Submitted activities (collapsible per category) -->
+    {% if activity_sections %}
+    <h2 style="font-size: 18px; margin: 8px 0 12px 0;">My activities</h2>
+    {% for section in activity_sections %}
+    <div class="act-section">
+        <div class="act-section-header" data-bs-toggle="collapse" data-bs-target="#act-section-{{ forloop.counter }}" aria-expanded="false">
+            <span class="act-section-name">{{ section.name }}</span>
+            <span class="act-section-total">{{ section.total }} pts &middot; <i class="bi bi-chevron-down"></i></span>
+        </div>
+        <div id="act-section-{{ forloop.counter }}" class="collapse">
+            <div class="act-section-body">
+                {% for subcat_name, entries in section.subcategories.items %}
+                <div class="act-subcat">
+                    <div class="act-subcat-title">{{ subcat_name }} &middot; {{ entries|length }}</div>
+                    {% for entry in entries %}
+                    {% with detail_id=forloop.counter|stringformat:"s" %}
+                    {% with parent_id=forloop.parentloop.counter|stringformat:"s" %}
+                    {% with section_id=forloop.parentloop.parentloop.counter|stringformat:"s" %}
+                    <div>
+                        <div class="act-item" data-bs-toggle="collapse" data-bs-target="#detail-{{ section_id }}-{{ parent_id }}-{{ detail_id }}" aria-expanded="false">
+                            <div>
+                                <i class="bi bi-chevron-right chevron"></i>
+                                {% firstof entry.type entry.title entry.name entry.rotations "Activity" %}
+                                {% if entry.role %}<span style="color: var(--ink-600);"> &middot; {{ entry.role }}</span>{% endif %}
+                            </div>
+                            <span class="act-item-points">{{ entry.points|default:0 }}</span>
+                        </div>
+                        <div class="collapse" id="detail-{{ section_id }}-{{ parent_id }}-{{ detail_id }}">
+                            <div class="act-details">
+                                <dl>
+                                    {% if entry.type %}<dt>Type</dt><dd>{{ entry.type }}</dd>{% endif %}
+                                    {% if entry.title %}<dt>Title</dt><dd>{{ entry.title }}</dd>{% endif %}
+                                    {% if entry.name %}<dt>Name</dt><dd>{{ entry.name }}</dd>{% endif %}
+                                    {% if entry.role %}<dt>Role</dt><dd>{{ entry.role }}</dd>{% endif %}
+                                    {% if entry.date %}<dt>Date</dt><dd>{{ entry.date }}</dd>{% endif %}
+                                    {% if entry.committee %}<dt>Committee</dt><dd>{{ entry.committee }}</dd>{% endif %}
+                                    {% if entry.pathway %}<dt>Pathway</dt><dd>{{ entry.pathway }}</dd>{% endif %}
+                                    {% if entry.conference %}<dt>Conference</dt><dd>{{ entry.conference }}</dd>{% endif %}
+                                    {% if entry.journal %}<dt>Journal</dt><dd>{{ entry.journal }}</dd>{% endif %}
+                                    {% if entry.society %}<dt>Society</dt><dd>{{ entry.society }}</dd>{% endif %}
+                                    {% if entry.trainee %}<dt>Trainee</dt><dd>{{ entry.trainee }}</dd>{% endif %}
+                                    {% if entry.student %}<dt>Student</dt><dd>{{ entry.student }}</dd>{% endif %}
+                                    {% if entry.rotations %}<dt>Rotations</dt><dd>{{ entry.rotations }}</dd>{% endif %}
+                                    {% if entry.award %}<dt>Award</dt><dd>{{ entry.award }}</dd>{% endif %}
+                                    {% if entry.grant %}<dt>Grant</dt><dd>{{ entry.grant }}</dd>{% endif %}
+                                    {% if entry.agency %}<dt>Agency</dt><dd>{{ entry.agency }}</dd>{% endif %}
+                                    {% if entry.amount %}<dt>Amount</dt><dd>{{ entry.amount }}</dd>{% endif %}
+                                    {% if entry.authors %}<dt>Authors</dt><dd>{{ entry.authors }}</dd>{% endif %}
+                                    {% if entry.impact_factor %}<dt>Impact factor</dt><dd>{{ entry.impact_factor }}</dd>{% endif %}
+                                    {% if entry.chapter %}<dt>Chapter</dt><dd>{{ entry.chapter }}</dd>{% endif %}
+                                    {% if entry.textbook %}<dt>Textbook</dt><dd>{{ entry.textbook }}</dd>{% endif %}
+                                    {% if entry.description %}<dt>Description</dt><dd>{{ entry.description }}</dd>{% endif %}
+                                    {% if entry.source %}<dt>Source</dt><dd>{{ entry.source }}</dd>{% endif %}
+                                </dl>
+                            </div>
+                        </div>
+                    </div>
+                    {% endwith %}{% endwith %}{% endwith %}
+                    {% endfor %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+    {% elif survey_data %}
+    <p style="color: var(--ink-600);">No activities reported for this academic year yet.</p>
+    {% endif %}
+
+    <!-- Footer -->
+    <div class="portal-foot">
+        <p><i class="bi bi-bookmark"></i> Bookmark this page &mdash; your personal link never changes.</p>
+        <p>UNMC Department of Anesthesiology &middot; Academic Achievement Survey</p>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    document.querySelectorAll('.act-item').forEach(function(item) {
+        item.addEventListener('click', function() { this.classList.toggle('expanded'); });
+    });
+</script>
 </body>
 </html>

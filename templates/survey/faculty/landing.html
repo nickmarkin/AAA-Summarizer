@@ -1,99 +1,202 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Academic Achievement Survey - UNMC Anesthesiology</title>
+    <title>Academic Achievement Survey — UNMC Anesthesiology</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="{% static 'css/unmc-tokens.css' %}" rel="stylesheet">
     <style>
         body {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            background: var(--paper-warm);
             min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 20px;
+            padding: 24px;
+            font-family: var(--font-sans);
+            color: var(--ink-800);
+            font-size: 14px;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
         }
-        .survey-card {
-            background: white;
-            border-radius: 16px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-            max-width: 600px;
-            width: 100%;
-        }
-        .survey-header {
-            background: #212529;
-            color: white;
-            padding: 30px;
-            border-radius: 16px 16px 0 0;
-            text-align: center;
-        }
-        .survey-body {
-            padding: 30px;
-        }
-        .category-list {
-            list-style: none;
-            padding: 0;
+        h1, h2, h3, h4, h5, h6 {
+            font-family: var(--font-display);
+            color: var(--ink-900);
+            font-weight: 700;
+            letter-spacing: -0.01em;
+            line-height: 1.2;
             margin: 0;
         }
+        .survey-card {
+            background: var(--paper);
+            border: 1px solid var(--ink-200);
+            border-radius: var(--r-xl);
+            box-shadow: var(--shadow-md);
+            max-width: 600px;
+            width: 100%;
+            overflow: hidden;
+        }
+        .survey-header {
+            background: var(--paper);
+            padding: 24px 28px 20px;
+            border-bottom: 1px solid var(--ink-200);
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+        .survey-header img { height: 36px; }
+        .survey-header h2 {
+            font-size: 18px;
+            color: var(--ink-900);
+            margin: 0;
+        }
+        .survey-header .sub {
+            font-size: 12px;
+            color: var(--ink-600);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin-top: 2px;
+        }
+        .survey-body { padding: 28px; }
+        .lead {
+            font-size: 16px;
+            color: var(--ink-900);
+            margin-bottom: 6px;
+        }
+        .muted { color: var(--ink-700); margin-bottom: 16px; }
+
+        .alert {
+            border-radius: var(--r-md);
+            border: 1px solid transparent;
+            padding: 12px 14px;
+            font-size: 13px;
+            margin-bottom: 16px;
+        }
+        .alert-success { background: var(--success-tint); border-color: #C8E2CA; color: #1B5E20; }
+        .alert-light { background: var(--ink-50); border-color: var(--ink-200); color: var(--ink-700); }
+
+        .progress-bar-container {
+            background: var(--ink-100);
+            border-radius: 999px;
+            height: 8px;
+            margin: 16px 0 8px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            background: var(--unmc-red);
+            height: 100%;
+            border-radius: 999px;
+            transition: width 200ms ease;
+        }
+        .progress-fill.is-complete { background: var(--success); }
+
+        .pct-text {
+            text-align: center;
+            color: var(--ink-600);
+            font-size: 12px;
+            margin-bottom: 20px;
+        }
+
+        .section-eyebrow {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            color: var(--ink-600);
+            font-weight: 500;
+            margin: 20px 0 8px;
+        }
+
+        .category-list { list-style: none; padding: 0; margin: 0; }
         .category-item {
             display: flex;
             align-items: center;
-            padding: 15px;
-            border-bottom: 1px solid #eee;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--ink-200);
+            gap: 12px;
         }
-        .category-item:last-child {
-            border-bottom: none;
-        }
+        .category-item:last-child { border-bottom: 0; }
         .category-number {
-            width: 35px;
-            height: 35px;
-            background: #e9ecef;
+            width: 30px; height: 30px;
+            background: var(--ink-100);
+            color: var(--ink-700);
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-weight: bold;
-            margin-right: 15px;
+            font-weight: 700;
+            font-size: 13px;
             flex-shrink: 0;
         }
         .category-item.completed .category-number {
-            background: #198754;
-            color: white;
+            background: var(--success);
+            color: #fff;
         }
-        .category-name {
-            flex: 1;
+        .category-name { flex: 1; color: var(--ink-900); font-weight: 500; }
+
+        .btn {
+            font-family: var(--font-sans);
+            font-weight: 500;
+            border-radius: var(--r-md);
+            font-size: 14px;
+            padding: 9px 16px;
         }
-        .progress-bar-container {
-            background: #e9ecef;
-            border-radius: 10px;
-            height: 10px;
-            margin: 20px 0;
+        .btn-lg { padding: 12px 22px; font-size: 15px; }
+        .btn-primary { background: var(--unmc-red); border-color: var(--unmc-red); color: #fff; }
+        .btn-primary:hover { background: var(--unmc-red-dark); border-color: var(--unmc-red-dark); }
+        .btn-success { background: var(--success); border-color: var(--success); color: #fff; }
+        .btn-success:hover { background: #1B5E20; border-color: #1B5E20; }
+        .btn-outline-primary {
+            background: transparent;
+            color: var(--unmc-red);
+            border-color: var(--unmc-red);
         }
-        .progress-fill {
-            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
-            height: 100%;
-            border-radius: 10px;
-            transition: width 0.3s ease;
+        .btn-outline-primary:hover {
+            background: var(--unmc-red);
+            color: #fff;
         }
+        .btn-sm { padding: 6px 12px; font-size: 13px; }
+        .d-grid { display: grid; gap: 8px; }
+
+        .survey-foot {
+            text-align: center;
+            padding: 14px;
+            border-top: 1px solid var(--ink-200);
+            background: var(--ink-50);
+        }
+        .survey-foot a {
+            color: var(--ink-600);
+            text-decoration: none;
+            font-size: 13px;
+        }
+        .survey-foot a:hover { color: var(--unmc-red); }
+
+        hr { border: 0; border-top: 1px solid var(--ink-200); margin: 16px 0; }
     </style>
 </head>
 <body>
     <div class="survey-card">
         <div class="survey-header">
-            <h2 class="mb-1"><i class="bi bi-award"></i> Academic Achievement Survey</h2>
-            <p class="mb-0 opacity-75">{{ invitation.campaign.name }}</p>
+            <img src="{% static 'images/unmc-logo.png' %}" alt="UNMC">
+            <div>
+                <h2>Academic Achievement Survey</h2>
+                <div class="sub">{{ invitation.campaign.name }}</div>
+            </div>
         </div>
 
         <div class="survey-body">
             {% if campaign_closed %}
-                <div class="text-center py-4">
-                    <i class="bi bi-clock-history text-warning" style="font-size: 4rem;"></i>
-                    <h4 class="mt-3">Survey Closed</h4>
-                    <p class="text-muted">
-                        This survey is no longer accepting submissions.
-                        <br>
+                <div style="text-align:center; padding: 32px 0;">
+                    <i class="bi bi-clock-history" style="font-size: 56px; color: var(--warning);"></i>
+                    <h4 style="margin-top: 12px; font-size: 18px;">Survey closed</h4>
+                    <p style="color: var(--ink-700); margin-top: 8px;">
+                        This survey is no longer accepting submissions.<br>
                         {% if invitation.status == 'submitted' %}
                             Your submission was recorded on {{ invitation.submitted_at|date:"M j, Y" }}.
                         {% else %}
@@ -102,10 +205,8 @@
                     </p>
                 </div>
             {% else %}
-                <p class="lead">
-                    Welcome, <strong>{{ invitation.faculty.first_name }}</strong>!
-                </p>
-                <p class="text-muted">
+                <p class="lead">Welcome, <strong>{{ invitation.faculty.first_name }}</strong>.</p>
+                <p class="muted">
                     Please report your academic achievements for {{ invitation.campaign.quarter }}.
                     Your progress is saved automatically.
                 </p>
@@ -122,19 +223,19 @@
                     <strong>Deadline:</strong> {{ invitation.campaign.closes_at|date:"l, F j, Y" }} at {{ invitation.campaign.closes_at|time:"g:i A" }}
                 </div>
 
-                <h6 class="text-uppercase text-muted mt-4 mb-3">Categories</h6>
+                <div class="section-eyebrow">Categories</div>
 
                 <div class="progress-bar-container">
                     {% if invitation.status == 'submitted' %}
-                    <div class="progress-fill" style="width: 100%; background: linear-gradient(90deg, #28a745 0%, #20c997 100%);"></div>
+                    <div class="progress-fill is-complete" style="width: 100%;"></div>
                     {% else %}
                     {% with pct=response.completion_percentage|default:0 %}
-                    <div class="progress-fill" style="width: {{ pct }}%;"></div>
+                    <div class="progress-fill {% if pct == 100 %}is-complete{% endif %}" style="width: {{ pct }}%;"></div>
                     {% endwith %}
                     {% endif %}
                 </div>
-                <p class="text-center text-muted small">
-                    {% if invitation.status == 'submitted' %}100{% else %}{{ response.completion_percentage|default:0 }}{% endif %}% Complete
+                <p class="pct-text">
+                    {% if invitation.status == 'submitted' %}100{% else %}{{ response.completion_percentage|default:0 }}{% endif %}% complete
                 </p>
 
                 <ul class="category-list">
@@ -154,7 +255,7 @@
                         </a>
                     </li>
                     {% empty %}
-                    <li class="category-item text-muted">
+                    <li class="category-item" style="color: var(--ink-600);">
                         <em>No survey categories configured.</em>
                     </li>
                     {% endfor %}
@@ -162,20 +263,20 @@
 
                 <hr>
 
-                <div class="d-grid gap-2">
+                <div class="d-grid">
                     {% if categories %}
                     {% if invitation.status == 'submitted' %}
                     <a href="{% url 'survey:survey_category' token=invitation.token category=categories.0.key %}"
                        class="btn btn-primary btn-lg">
-                        Edit Survey
+                        Edit survey
                     </a>
                     {% else %}
                     <a href="{% url 'survey:survey_category' token=invitation.token category=first_incomplete %}"
                        class="btn btn-primary btn-lg">
                         {% if response.completion_percentage > 0 %}
-                            Continue Survey
+                            Continue survey
                         {% else %}
-                            Begin Survey
+                            Begin survey
                         {% endif %}
                     </a>
                     {% endif %}
@@ -183,16 +284,16 @@
                     {% if response.completion_percentage == 100 or invitation.status == 'submitted' %}
                     <a href="{% url 'survey:survey_review' token=invitation.token %}"
                        class="btn btn-success btn-lg">
-                        Review & Submit
+                        Review &amp; submit
                     </a>
                     {% endif %}
                 </div>
             {% endif %}
         </div>
 
-        <div class="text-center py-3" style="border-top: 1px solid #eee;">
-            <a href="{% url 'faculty_portal' invitation.faculty.access_token %}" class="text-muted text-decoration-none">
-                <i class="bi bi-arrow-left"></i> Back to My Portal
+        <div class="survey-foot">
+            <a href="{% url 'faculty_portal' invitation.faculty.access_token %}">
+                <i class="bi bi-arrow-left"></i> Back to my portal
             </a>
         </div>
     </div>

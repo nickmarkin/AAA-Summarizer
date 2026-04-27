@@ -8,251 +8,220 @@
 {% block extra_css %}
 <style>
     .roster-filters {
-        background: #f8f9fa;
-        padding: 15px 20px;
-        border-radius: 8px;
-        margin-bottom: 20px;
+        background: var(--ink-50);
+        border: 1px solid var(--ink-200);
+        padding: 8px 12px;
+        border-radius: var(--r-md);
+        margin-bottom: 16px;
         display: flex;
         align-items: center;
-        gap: 15px;
+        gap: 8px;
         flex-wrap: wrap;
     }
-    .roster-filters select {
-        padding: 8px 12px;
-        border: 1px solid #dee2e6;
-        border-radius: 6px;
-        background: white;
+    .roster-filters select.form-select-sm {
+        padding: 6px 10px;
+        font-size: 13px;
+        border: 1px solid var(--ink-300);
+        border-radius: var(--r-md);
+        background: var(--paper);
+        max-width: 200px;
     }
-    .roster-filters label {
+
+    .roster-table {
+        background: var(--paper);
+        border: 1px solid var(--ink-200);
+        border-radius: var(--r-lg);
+        box-shadow: var(--shadow-sm);
+        overflow: hidden;
+    }
+
+    .roster-row {
         display: flex;
         align-items: center;
-        gap: 5px;
-        cursor: pointer;
+        padding: 12px 20px;
+        border-bottom: 1px solid var(--ink-200);
+        gap: 0;
+        transition: background 120ms ease;
     }
-    .faculty-card {
-        background: white;
-        border: 1px solid #e9ecef;
-        border-radius: 8px;
-        margin-bottom: 10px;
-        transition: all 0.15s ease;
-        cursor: pointer;
-    }
-    .faculty-card:hover {
-        border-color: #0d6efd;
-        box-shadow: 0 2px 8px rgba(13, 110, 253, 0.15);
-        transform: translateY(-1px);
-    }
-    .faculty-card a {
-        display: flex;
-        align-items: center;
+    .roster-row:last-child { border-bottom: 0; }
+    .roster-row:hover { background: var(--ink-50); }
+    .roster-row.is-header {
+        background: var(--ink-50);
         padding: 10px 20px;
+        cursor: default;
+    }
+    .roster-row.is-header:hover { background: var(--ink-50); }
+
+    .roster-row .col {
+        padding: 0 12px;
+        font-size: 13px;
+        color: var(--ink-800);
+        flex-shrink: 0;
+    }
+    .roster-row .col:first-child { padding-left: 0; }
+    .roster-row .col:last-child { padding-right: 0; }
+    .roster-row.is-header .col {
+        font-size: 11px;
+        font-weight: 600;
+        color: var(--ink-600);
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+    }
+    .col-name { width: 220px; font-weight: 600; color: var(--ink-900); white-space: nowrap; }
+    .col-email { width: 200px; color: var(--ink-600); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .col-rank { width: 160px; white-space: nowrap; }
+    .col-division { width: 140px; }
+    .col-badges { flex: 1; display: flex; gap: 6px; align-items: center; min-width: 200px; flex-wrap: wrap; }
+    .col-actions { width: 50px; text-align: right; }
+
+    .roster-row a.row-link {
+        flex: 1;
+        display: flex;
+        align-items: center;
         text-decoration: none;
         color: inherit;
-        gap: 0;
     }
-    .faculty-col {
-        padding: 0 15px;
-        border-right: 1px solid #e9ecef;
+    .roster-row a.row-link:hover .col-name {
+        color: var(--unmc-red);
+        text-decoration: underline;
     }
-    .faculty-col:first-child {
-        padding-left: 0;
-    }
-    .faculty-col:last-child {
-        border-right: none;
-        padding-right: 0;
-    }
-    .faculty-name {
-        font-weight: 600;
-        color: #212529;
-        width: 220px;
-        white-space: nowrap;
-    }
-    .faculty-email {
-        color: #6c757d;
-        font-size: 13px;
-        width: 200px;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-    .faculty-rank {
-        width: 160px;
-        font-size: 14px;
-        color: #495057;
-        white-space: nowrap;
-    }
-    .faculty-division {
-        width: 120px;
-        font-size: 14px;
-        color: #495057;
-    }
-    .faculty-badges {
-        display: flex;
-        gap: 6px;
+
+    /* 22x22 quarter status icons */
+    .q-icon {
+        display: inline-flex;
         align-items: center;
-        min-width: 200px;
-    }
-    .quarter-badge {
-        padding: 3px 8px;
+        justify-content: center;
+        width: 28px;
+        height: 22px;
         border-radius: 4px;
-        font-size: 11px;
-        font-weight: 500;
-        border: 1px solid;
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.02em;
+        border: 1px solid transparent;
     }
-    .quarter-badge.submitted {
-        background: #d4edda;
-        color: #155724;
-        border-color: #c3e6cb;
+    .q-icon.q-submitted { background: var(--success); color: #fff; }
+    .q-icon.q-inprogress { background: var(--warning); color: #2C1A00; }
+    .q-icon.q-pending { background: var(--ink-100); color: var(--ink-500); border-color: var(--ink-200); }
+    .q-icon.q-notinvited { background: var(--paper); color: var(--ink-400); border-color: var(--ink-300); }
+
+    .empty-state {
+        text-align: center;
+        padding: 64px 20px;
+        color: var(--ink-600);
     }
-    .quarter-badge.in_progress {
-        background: #fff3cd;
-        color: #856404;
-        border-color: #ffeeba;
+    .empty-state .bi {
+        font-size: 48px;
+        color: var(--ink-300);
+        display: block;
+        margin-bottom: 12px;
     }
-    .quarter-badge.pending {
-        background: #e9ecef;
-        color: #495057;
-        border-color: #dee2e6;
+
+    @media (max-width: 900px) {
+        .col-email, .col-rank { display: none; }
     }
-    .quarter-badge.none {
-        background: #fff;
-        color: #adb5bd;
-        border-color: #dee2e6;
-    }
-    .roster-header-row {
-        display: flex;
-        align-items: center;
-        padding: 10px 20px;
-        background: #f8f9fa;
-        border-radius: 8px;
-        margin-bottom: 8px;
-    }
-    .roster-header-row .faculty-col {
-        border-right: none;
-        font-size: 11px;
-        font-weight: 600;
-        color: #6c757d;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-    }
-    .badge {
-        padding: 4px 10px;
-        border-radius: 12px;
-        font-size: 11px;
-        font-weight: 600;
-        text-transform: uppercase;
-    }
-    .badge-success { background: #d4edda; color: #155724; }
-    .badge-warning { background: #fff3cd; color: #856404; }
-    .badge-secondary { background: #e9ecef; color: #495057; }
-    .badge-info { background: #d1ecf1; color: #0c5460; }
-    .badge-danger { background: #f8d7da; color: #721c24; }
-    .roster-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 15px;
-    }
-    .roster-count {
-        color: #6c757d;
-        font-size: 14px;
-    }
-    .edit-btn {
-        padding: 4px 12px;
-        font-size: 12px;
-        color: #6c757d;
-        border: 1px solid #dee2e6;
-        border-radius: 4px;
-        background: white;
-        text-decoration: none;
-        margin-left: 10px;
-    }
-    .edit-btn:hover {
-        background: #f8f9fa;
-        color: #495057;
+    @media (max-width: 700px) {
+        .col-division { display: none; }
+        .col-name { width: 160px; }
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="roster-header">
+<div class="page-header">
     <div>
-        <a href="{% url 'faculty_add' %}" class="btn btn-app btn-sm">
-            <i class="bi bi-person-plus"></i> Add Faculty
+        <div class="page-eyebrow">Department</div>
+        <h1>Faculty Roster</h1>
+        <div class="page-subtitle">{{ faculty|length }} faculty members &middot; AY {{ academic_year.year_code }}</div>
+    </div>
+    <div class="page-actions">
+        <a href="{% url 'export_roster' %}" class="u-btn u-btn--secondary u-btn--sm">
+            <i class="bi bi-download"></i> Export roster
         </a>
-        <a href="{% url 'import_roster' %}" class="btn btn-app btn-sm" style="background: #6c757d;">Import from CSV</a>
-        <a href="{% url 'export_roster' %}" class="btn btn-app btn-sm" style="background: #6c757d;">
-            <i class="bi bi-download"></i> Export Roster
+        <a href="{% url 'export_portal_links' %}" class="u-btn u-btn--secondary u-btn--sm">
+            <i class="bi bi-link-45deg"></i> Export portal links
         </a>
-        <a href="{% url 'export_portal_links' %}" class="btn btn-app btn-sm" style="background: #6c757d;">
-            <i class="bi bi-download"></i> Export Portal Links
+        <a href="{% url 'import_roster' %}" class="u-btn u-btn--secondary u-btn--sm">
+            <i class="bi bi-upload"></i> Import CSV
+        </a>
+        <a href="{% url 'faculty_add' %}" class="u-btn u-btn--primary u-btn--sm">
+            <i class="bi bi-person-plus"></i> Add faculty
         </a>
     </div>
-    <div class="roster-count">{{ faculty|length }} faculty members</div>
 </div>
 
 <div class="roster-filters">
     <form method="get" style="display: contents;">
-        <select name="division" onchange="this.form.submit()">
+        <select name="division" onchange="this.form.submit()" class="form-select-sm">
             <option value="">All Divisions</option>
             {% for value, label in division_choices %}
             <option value="{{ value }}" {% if value == current_division %}selected{% endif %}>{{ label }}</option>
             {% endfor %}
         </select>
 
-        <select name="rank" onchange="this.form.submit()">
+        <select name="rank" onchange="this.form.submit()" class="form-select-sm">
             <option value="">All Ranks</option>
             {% for value, label in rank_choices %}
             <option value="{{ value }}" {% if value == current_rank %}selected{% endif %}>{{ label }}</option>
             {% endfor %}
         </select>
 
-        <select name="contract" onchange="this.form.submit()">
+        <select name="contract" onchange="this.form.submit()" class="form-select-sm">
             <option value="">All Contracts</option>
             {% for value, label in contract_choices %}
             <option value="{{ value }}" {% if value == current_contract %}selected{% endif %}>{{ label }}</option>
             {% endfor %}
         </select>
-
     </form>
 </div>
 
-<div class="roster-header-row">
-    <span class="faculty-col faculty-name">Name</span>
-    <span class="faculty-col faculty-email">Email</span>
-    <span class="faculty-col faculty-rank">Rank</span>
-    <span class="faculty-col faculty-division">Division</span>
-    <span class="faculty-col faculty-badges">AY {{ academic_year.year_code }} Surveys</span>
-    <span class="faculty-col" style="width: 50px;"></span>
-</div>
+<div class="roster-table">
+    <div class="roster-row is-header">
+        <span class="col col-name">Name</span>
+        <span class="col col-email">Email</span>
+        <span class="col col-rank">Rank</span>
+        <span class="col col-division">Division</span>
+        <span class="col col-badges">AY {{ academic_year.year_code }} Surveys</span>
+        <span class="col col-actions"></span>
+    </div>
 
-{% for f in faculty %}
-<div class="faculty-card" style="display: flex; align-items: center;">
-    <a href="{% url 'faculty_detail' f.email %}" style="flex: 1; display: flex;">
-        <span class="faculty-col faculty-name">{{ f.display_name }}</span>
-        <span class="faculty-col faculty-email">{{ f.email }}</span>
-        <span class="faculty-col faculty-rank">{{ f.get_rank_display|default:"-" }}</span>
-        <span class="faculty-col faculty-division">{{ f.get_division_display|default:"-" }}</span>
-        <span class="faculty-col faculty-badges">
-            {% with faculty_invites=invitation_status|get_item:f.email %}
-                {% for campaign in campaigns %}
-                    {% with camp_status=faculty_invites|get_item:campaign.id %}
-                        <span class="quarter-badge {% if camp_status == 'submitted' %}submitted{% elif camp_status == 'in_progress' %}in_progress{% elif camp_status == 'pending' %}pending{% else %}none{% endif %}" title="{{ campaign.quarter }}: {% if camp_status %}{{ camp_status }}{% else %}not invited{% endif %}">
-                            {{ campaign.quarter }}{% if camp_status == 'submitted' %} ✓{% endif %}
-                        </span>
-                    {% endwith %}
-                {% empty %}
-                    <span class="text-muted" style="font-size: 12px;">No campaigns</span>
-                {% endfor %}
-            {% endwith %}
+    {% for f in faculty %}
+    <div class="roster-row">
+        <a href="{% url 'faculty_detail' f.email %}" class="row-link">
+            <span class="col col-name">{{ f.display_name }}</span>
+            <span class="col col-email">{{ f.email }}</span>
+            <span class="col col-rank">{{ f.get_rank_display|default:"—" }}</span>
+            <span class="col col-division">{{ f.get_division_display|default:"—" }}</span>
+            <span class="col col-badges">
+                {% with faculty_invites=invitation_status|get_item:f.email %}
+                    {% for campaign in campaigns %}
+                        {% with camp_status=faculty_invites|get_item:campaign.id %}
+                            <span class="q-icon {% if camp_status == 'submitted' %}q-submitted{% elif camp_status == 'in_progress' %}q-inprogress{% elif camp_status == 'pending' %}q-pending{% else %}q-notinvited{% endif %}"
+                                  title="{{ campaign.quarter }}: {% if camp_status %}{{ camp_status }}{% else %}not invited{% endif %}">
+                                {{ campaign.quarter }}
+                            </span>
+                        {% endwith %}
+                    {% empty %}
+                        <span style="color: var(--ink-500); font-size: 12px;">No campaigns</span>
+                    {% endfor %}
+                {% endwith %}
+            </span>
+        </a>
+        <span class="col col-actions">
+            <a href="{% url 'faculty_portal' f.access_token %}" class="u-btn u-btn--ghost u-btn--sm" title="View as faculty" target="_blank">
+                <i class="bi bi-eye"></i>
+            </a>
         </span>
-    </a>
-    <a href="{% url 'faculty_portal' f.access_token %}" class="btn btn-sm btn-outline-primary" style="margin-right: 10px;" title="View as faculty" target="_blank">
-        <i class="bi bi-box-arrow-up-right"></i>
-    </a>
+    </div>
+    {% empty %}
+    <div class="empty-state">
+        <i class="bi bi-people"></i>
+        <h4 style="margin-bottom: 6px;">No faculty found</h4>
+        <p>Get started by importing a roster from CSV or adding faculty manually.</p>
+        <div style="margin-top: 12px; display:flex; gap:8px; justify-content:center;">
+            <a href="{% url 'import_roster' %}" class="u-btn u-btn--primary"><i class="bi bi-upload"></i> Import CSV</a>
+            <a href="{% url 'faculty_add' %}" class="u-btn u-btn--secondary"><i class="bi bi-person-plus"></i> Add faculty</a>
+        </div>
+    </div>
+    {% endfor %}
 </div>
-{% empty %}
-<div class="card" style="text-align: center; padding: 40px; color: #666;">
-    No faculty found. <a href="{% url 'import_roster' %}">Import roster from CSV</a>
-</div>
-{% endfor %}
 {% endblock %}

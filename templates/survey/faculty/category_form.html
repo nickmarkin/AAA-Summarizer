@@ -1,148 +1,209 @@
-{% load survey_tags %}
+{% load survey_tags static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ category_config.name }} - Academic Achievement Survey</title>
+    <title>{{ category_config.name }} — Academic Achievement Survey</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="{% static 'css/unmc-tokens.css' %}" rel="stylesheet">
     <style>
         body {
-            background: #f5f5f5;
+            background: var(--ink-50);
             min-height: 100vh;
-        }
-        .survey-container {
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-        .survey-header {
-            background: #212529;
-            color: white;
-            padding: 20px;
-            border-radius: 8px 8px 0 0;
-        }
-        .category-tabs {
-            background: #fff;
-            border-bottom: 1px solid #dee2e6;
-        }
-        .category-tabs .nav-link {
-            color: #666;
-            border: none;
-            border-bottom: 3px solid transparent;
-            border-radius: 0;
-            padding: 12px 16px;
+            font-family: var(--font-sans);
+            color: var(--ink-800);
             font-size: 14px;
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
         }
+        h1, h2, h3, h4, h5, h6 {
+            font-family: var(--font-display);
+            color: var(--ink-900);
+            font-weight: 700;
+            letter-spacing: -0.01em;
+            line-height: 1.2;
+        }
+        a { color: var(--unmc-red); }
+        a:hover { color: var(--unmc-red-dark); }
+
+        .survey-container {
+            max-width: 880px;
+            margin: 0 auto;
+            padding: 24px 16px 80px;
+        }
+
+        /* Top utility bar */
+        .util-bar {
+            background: var(--paper);
+            border: 1px solid var(--ink-200);
+            border-radius: var(--r-lg) var(--r-lg) 0 0;
+            padding: 14px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        .util-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .util-brand img { height: 28px; }
+        .util-brand-name {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--ink-900);
+        }
+        .util-brand-sub {
+            font-size: 10px;
+            color: var(--ink-600);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+        .util-meta { text-align: right; line-height: 1.2; }
+        .util-meta .name { font-size: 13px; font-weight: 600; color: var(--ink-900); }
+        .util-meta .role { font-size: 11px; color: var(--ink-600); text-transform: uppercase; letter-spacing: 0.08em; }
+
+        /* Back link */
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--ink-600);
+            font-size: 13px;
+            margin-bottom: 12px;
+            text-decoration: none;
+        }
+        .back-link:hover { color: var(--unmc-red); }
+
+        /* Category tabs (sticky progress strip) */
+        .category-tabs {
+            background: var(--paper);
+            border: 1px solid var(--ink-200);
+            border-top: 0;
+            position: sticky;
+            top: 0;
+            z-index: 20;
+        }
+        .category-tabs .nav { padding: 0 8px; flex-wrap: nowrap; overflow-x: auto; }
+        .category-tabs .nav-link {
+            color: var(--ink-600);
+            border: 0;
+            border-bottom: 2px solid transparent;
+            border-radius: 0;
+            padding: 14px 14px;
+            font-size: 13px;
+            font-weight: 500;
+            white-space: nowrap;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .category-tabs .nav-link:hover { color: var(--ink-900); }
         .category-tabs .nav-link.active {
-            color: #0d6efd;
-            border-bottom-color: #0d6efd;
+            color: var(--unmc-red);
+            border-bottom-color: var(--unmc-red);
         }
         .category-tabs .nav-link.complete::after {
-            content: ' \2713';
-            color: #198754;
+            content: '';
+            display: inline-block;
+            width: 6px; height: 6px;
+            border-radius: 50%;
+            background: var(--success);
         }
+
+        /* Survey form */
         .survey-form {
-            background: white;
-            padding: 30px;
-            border-radius: 0 0 8px 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            background: var(--paper);
+            padding: 28px;
+            border: 1px solid var(--ink-200);
+            border-top: 0;
+            border-radius: 0 0 var(--r-lg) var(--r-lg);
+            box-shadow: var(--shadow-sm);
+        }
+        .survey-form h4 {
+            font-size: 18px;
+            margin: 0 0 4px 0;
         }
 
-        /* Subsection styling */
+        /* Subsection */
         .subsection {
-            margin-bottom: 30px;
-            padding-bottom: 25px;
-            border-bottom: 2px solid #e9ecef;
+            margin-bottom: 28px;
+            padding-bottom: 24px;
+            border-bottom: 1px solid var(--ink-200);
         }
-        .subsection:last-child {
-            border-bottom: none;
-            margin-bottom: 0;
-        }
-        .subsection-header {
-            margin-bottom: 20px;
-        }
+        .subsection:last-child { border-bottom: 0; margin-bottom: 0; padding-bottom: 0; }
+        .subsection-header { margin-bottom: 16px; }
         .subsection-title {
-            font-size: 1.1rem;
+            font-size: 15px;
             font-weight: 600;
-            color: #333;
-            margin-bottom: 5px;
+            color: var(--ink-900);
+            margin-bottom: 4px;
         }
-        /* Points hidden from faculty view - kept in backend */
 
-        /* Trigger question styling */
+        /* Trigger question */
         .trigger-question {
-            background: #f8f9fa;
-            border: 1px solid #e9ecef;
-            border-radius: 8px;
-            padding: 20px;
-            margin-bottom: 15px;
+            background: var(--ink-50);
+            border: 1px solid var(--ink-200);
+            border-radius: var(--r-md);
+            padding: 16px;
+            margin-bottom: 12px;
         }
-        .trigger-question label {
+        .trigger-question > label,
+        .trigger-question .trigger-label-text {
             font-weight: 500;
+            color: var(--ink-900);
             margin-bottom: 12px;
             display: block;
         }
-        .trigger-options {
-            display: flex;
-            gap: 15px;
-        }
-        .trigger-option {
-            flex: 0 0 auto;
-        }
-        .trigger-option input[type="radio"] {
-            display: none;
-        }
+        .trigger-options { display: flex; gap: 8px; flex-wrap: wrap; }
+        .trigger-option { flex: 0 0 auto; }
+        .trigger-option input[type="radio"] { display: none; }
         .trigger-option label {
             display: inline-block;
-            padding: 10px 30px;
-            border: 2px solid #dee2e6;
-            border-radius: 6px;
+            padding: 8px 20px;
+            border: 1px solid var(--ink-300);
+            border-radius: var(--r-md);
             cursor: pointer;
-            font-weight: normal;
+            font-weight: 500;
+            font-size: 13px;
+            color: var(--ink-800);
+            background: var(--paper);
             margin-bottom: 0;
-            transition: all 0.2s;
+            transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
         }
         .trigger-option label:hover {
-            border-color: #0d6efd;
-        }
-        .trigger-option input:checked + label {
-            background: #0d6efd;
-            border-color: #0d6efd;
-            color: white;
+            border-color: var(--unmc-red);
+            color: var(--unmc-red);
         }
         .trigger-option input[value="yes"]:checked + label {
-            background: #198754;
-            border-color: #198754;
+            background: var(--success);
+            border-color: var(--success);
+            color: #fff;
         }
-        /* No button default state - light blue to indicate it's the default */
         .trigger-option input[value="no"] + label {
-            background: #e7f1ff;
-            border-color: #b6d4fe;
-            color: #0d6efd;
+            background: var(--paper);
+            color: var(--ink-700);
         }
-        .trigger-option input[value="no"] + label:hover {
-            background: #cfe2ff;
-            border-color: #9ec5fe;
-        }
-        /* No button when clicked - dark blue to show selection */
         .trigger-option input[value="no"]:checked + label {
-            background: #0d6efd;
-            border-color: #0d6efd;
-            color: white;
+            background: var(--unmc-gray-11);
+            border-color: var(--unmc-gray-11);
+            color: #fff;
         }
-        /* When Yes is selected, make No look neutral (not highlighted) */
         .trigger-options:has(input[value="yes"]:checked) .trigger-option input[value="no"] + label {
-            background: white;
-            border-color: #dee2e6;
-            color: #212529;
-        }
-        .trigger-options:has(input[value="yes"]:checked) .trigger-option input[value="no"] + label:hover {
-            border-color: #0d6efd;
+            background: var(--paper);
+            border-color: var(--ink-300);
+            color: var(--ink-700);
         }
 
-        /* Info button styling */
+        /* Info button */
         .info-btn {
             display: inline-flex;
             align-items: center;
@@ -150,173 +211,232 @@
             width: 22px;
             height: 22px;
             border-radius: 50%;
-            background: #0d6efd;
-            color: white;
-            font-size: 14px;
-            font-weight: bold;
+            background: var(--ink-100);
+            color: var(--ink-700);
+            font-size: 12px;
+            font-weight: 600;
             cursor: pointer;
-            border: none;
+            border: 1px solid var(--ink-300);
             margin-left: 8px;
             vertical-align: middle;
-            transition: background 0.2s;
+            transition: background 120ms ease, color 120ms ease;
         }
         .info-btn:hover {
-            background: #0b5ed7;
+            background: var(--unmc-red);
+            color: #fff;
+            border-color: var(--unmc-red);
         }
-        .trigger-label-container {
-            display: flex;
-            align-items: flex-start;
-        }
-        .trigger-label-text {
-            flex: 1;
-        }
+        .trigger-label-container { display: flex; align-items: flex-start; }
+        .trigger-label-text { flex: 1; }
 
-        /* Entry container */
-        .entries-container {
-            display: none;
-            margin-top: 20px;
-        }
-        .entries-container.show {
-            display: block;
-        }
+        /* Entry container & cards */
+        .entries-container { display: none; margin-top: 16px; }
+        .entries-container.show { display: block; }
 
-        /* Individual entry */
         .entry-card {
-            background: #fafafa;
-            border: 1px solid #e9ecef;
-            border-radius: 8px;
-            padding: 20px;
-            margin-bottom: 15px;
+            background: var(--paper);
+            border: 1px solid var(--ink-200);
+            border-radius: var(--r-md);
+            padding: 18px;
+            margin-bottom: 12px;
             display: none;
+            box-shadow: var(--shadow-sm);
         }
-        .entry-card.show {
-            display: block;
-        }
+        .entry-card.show { display: block; }
         .entry-card.carried-forward {
-            background: #f0f7ff;
-            border-color: #b8daff;
+            background: var(--info-tint);
+            border-color: #CCDAF6;
         }
         .carried-badge {
-            background: #007bff;
-            color: white;
-            font-size: 11px;
+            background: var(--info);
+            color: #fff;
+            font-size: 10px;
+            font-weight: 600;
             padding: 2px 8px;
-            border-radius: 10px;
+            border-radius: 999px;
             margin-left: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
         }
         .entry-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 15px;
+            margin-bottom: 14px;
             padding-bottom: 10px;
-            border-bottom: 1px solid #e9ecef;
+            border-bottom: 1px solid var(--ink-200);
         }
         .entry-title {
             font-weight: 600;
-            color: #495057;
+            color: var(--ink-900);
+            font-size: 14px;
         }
 
-        /* Radio choices for entry type */
-        .type-choices {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            margin-bottom: 15px;
-        }
-        .type-choice {
-            display: flex;
-            align-items: flex-start;
-        }
+        /* Radio choices */
+        .type-choices { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
+        .type-choice { display: flex; align-items: flex-start; }
         .type-choice input[type="radio"] {
             margin-top: 4px;
             margin-right: 10px;
+            accent-color: var(--unmc-red);
         }
-        .type-choice label {
-            cursor: pointer;
-            flex: 1;
-        }
+        .type-choice label { cursor: pointer; flex: 1; color: var(--ink-800); }
 
-        /* Add another button */
-        .add-another {
-            display: none;
-            margin-top: 15px;
-        }
-        .add-another.show {
-            display: block;
-        }
+        /* Add another */
+        .add-another { display: none; margin-top: 12px; }
+        .add-another.show { display: block; }
         .add-another-btn {
             background: transparent;
-            border: 2px dashed #0d6efd;
-            color: #0d6efd;
+            border: 1px dashed var(--ink-300);
+            color: var(--ink-700);
             padding: 12px 20px;
-            border-radius: 6px;
+            border-radius: var(--r-md);
             cursor: pointer;
             width: 100%;
             font-weight: 500;
-            transition: all 0.2s;
+            font-size: 13px;
+            transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
         }
         .add-another-btn:hover {
-            background: #e7f1ff;
+            background: var(--unmc-red-tint-2);
+            border-color: var(--unmc-red);
+            color: var(--unmc-red);
         }
 
+        /* Bootstrap form override (within survey form) */
+        .survey-form .form-control,
+        .survey-form .form-select {
+            font-family: var(--font-sans);
+            border: 1px solid var(--ink-300);
+            border-radius: var(--r-md);
+            font-size: 14px;
+        }
+        .survey-form .form-control:focus,
+        .survey-form .form-select:focus {
+            border-color: var(--unmc-red);
+            box-shadow: 0 0 0 3px rgba(173,18,42,0.12);
+            outline: none;
+        }
+        .survey-form .form-label {
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--ink-800);
+            margin-bottom: 6px;
+        }
 
-        /* Toast notification */
+        /* Toast */
         .save-toast {
             position: fixed;
-            bottom: 100px;
+            bottom: 96px;
             left: 50%;
             transform: translateX(-50%);
-            background: #198754;
-            color: white;
-            padding: 12px 24px;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            background: var(--success);
+            color: #fff;
+            padding: 10px 20px;
+            border-radius: var(--r-md);
+            box-shadow: var(--shadow-lg);
             z-index: 1050;
             opacity: 0;
-            transition: opacity 0.3s ease;
+            transition: opacity 200ms ease;
             pointer-events: none;
+            font-size: 13px;
+            font-weight: 500;
         }
-        .save-toast.show {
-            opacity: 1;
-        }
+        .save-toast.show { opacity: 1; }
 
-        /* Action bar */
+        /* Action bar (sticky bottom) */
         .action-bar {
             position: sticky;
             bottom: 0;
-            background: white;
-            border-top: 2px solid #dee2e6;
-            padding: 15px 30px;
-            margin: 30px -30px -30px -30px;
+            background: var(--paper);
+            border-top: 1px solid var(--ink-200);
+            padding: 14px 28px;
+            margin: 28px -28px -28px -28px;
             display: flex;
-            justify-content: flex-end;
+            justify-content: space-between;
             align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
         }
+        .autosave-indicator {
+            font-size: 12px;
+            color: var(--ink-600);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .autosave-indicator .dot {
+            width: 6px; height: 6px; border-radius: 50%;
+            background: var(--success);
+        }
+
+        /* Buttons in this view */
+        .btn {
+            font-family: var(--font-sans);
+            font-weight: 500;
+            border-radius: var(--r-md);
+            padding: 9px 16px;
+            font-size: 14px;
+        }
+        .btn-primary {
+            background: var(--unmc-red);
+            border-color: var(--unmc-red);
+        }
+        .btn-primary:hover, .btn-primary:focus {
+            background: var(--unmc-red-dark);
+            border-color: var(--unmc-red-dark);
+        }
+        .btn-outline-secondary {
+            background: var(--paper);
+            border-color: var(--ink-300);
+            color: var(--ink-800);
+        }
+        .btn-outline-secondary:hover {
+            background: var(--ink-50);
+            border-color: var(--ink-400);
+            color: var(--ink-900);
+        }
+        .btn-sm { padding: 6px 12px; font-size: 13px; }
+
+        /* Modal overrides */
+        .modal-content {
+            border-radius: var(--r-lg);
+            border: 1px solid var(--ink-200);
+        }
+        .modal-header {
+            border-bottom: 1px solid var(--ink-200);
+            background: var(--paper);
+            padding: 16px 20px;
+        }
+        .modal-title { font-size: 16px; color: var(--ink-900); }
+        .modal-body { padding: 20px; color: var(--ink-800); }
+        .modal-footer { border-top: 1px solid var(--ink-200); padding: 12px 20px; }
     </style>
 </head>
 <body>
     <div class="survey-container">
         <!-- Back link -->
-        <div class="mb-2">
-            <a href="{% url 'survey:survey_landing' token=invitation.token %}" class="text-white text-decoration-none" style="opacity: 0.8;">
-                <i class="bi bi-arrow-left"></i> Survey Overview
-            </a>
-        </div>
+        <a href="{% url 'survey:survey_landing' token=invitation.token %}" class="back-link">
+            <i class="bi bi-arrow-left"></i> Survey overview
+        </a>
 
-        <!-- Header -->
-        <div class="survey-header">
-            <div class="d-flex justify-content-between align-items-center">
+        <!-- Top utility bar -->
+        <div class="util-bar">
+            <div class="util-brand">
+                <img src="{% static 'images/unmc-logo.png' %}" alt="UNMC">
                 <div>
-                    <h4 class="mb-1"><i class="bi bi-award"></i> Academic Achievement Survey</h4>
-                    <small class="opacity-75">{{ invitation.campaign.name }}</small>
+                    <div class="util-brand-name">Academic Achievement Survey</div>
+                    <div class="util-brand-sub">{{ invitation.campaign.name }}</div>
                 </div>
-                <div class="text-end">
-                    <small>{{ invitation.faculty.first_name }} {{ invitation.faculty.last_name }}</small>
-                    <a href="{% url 'faculty_portal' invitation.faculty.access_token %}" class="btn btn-sm btn-outline-light ms-2" title="My Portal">
-                        <i class="bi bi-house-door"></i>
-                    </a>
+            </div>
+            <div class="d-flex align-items-center gap-3">
+                <div class="util-meta">
+                    <div class="name">Dr. {{ invitation.faculty.first_name }} {{ invitation.faculty.last_name }}</div>
+                    <div class="role">Survey response</div>
                 </div>
+                <a href="{% url 'faculty_portal' invitation.faculty.access_token %}" class="u-btn u-btn--ghost u-btn--sm" title="My Portal">
+                    <i class="bi bi-house-door"></i>
+                </a>
             </div>
         </div>
 
@@ -339,8 +459,9 @@
             {% csrf_token %}
 
             <div class="mb-4">
+                <div class="eyebrow" style="font-size:11px; color: var(--ink-600); text-transform:uppercase; letter-spacing:0.12em; margin-bottom:4px;">Section</div>
                 <h4>{{ category_config.name }}</h4>
-                <p class="text-muted mb-0">{{ category_config.description }}</p>
+                <p class="text-muted mb-0" style="color: var(--ink-600);">{{ category_config.description }}</p>
             </div>
 
             <!-- Subsections rendered by JavaScript -->
@@ -348,12 +469,17 @@
 
             <!-- Actions -->
             <div class="action-bar">
-                <button type="submit" name="action" value="save" class="btn btn-outline-secondary me-2">
-                    <i class="bi bi-save"></i> Save
-                </button>
-                <button type="submit" name="action" value="continue" class="btn btn-primary">
-                    Save & Continue <i class="bi bi-arrow-right"></i>
-                </button>
+                <div class="autosave-indicator" id="autosaveIndicator">
+                    <span class="dot"></span> All changes saved
+                </div>
+                <div class="d-flex gap-2">
+                    <button type="submit" name="action" value="save" class="btn btn-outline-secondary">
+                        <i class="bi bi-save"></i> Save
+                    </button>
+                    <button type="submit" name="action" value="continue" class="btn btn-primary">
+                        Save &amp; continue <i class="bi bi-arrow-right"></i>
+                    </button>
+                </div>
             </div>
         </form>
     </div>

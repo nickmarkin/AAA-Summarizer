@@ -6,115 +6,241 @@
 
 {% block extra_css %}
 <style>
-    .overview-grid {
+    .stat-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 15px;
-        margin-bottom: 25px;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 16px;
+        margin-bottom: 32px;
     }
-    .overview-card {
-        background: #fff;
-        border: 1px solid #dee2e6;
-        border-radius: 8px;
-        padding: 20px;
-        text-align: center;
+    @media (max-width: 900px) {
+        .stat-grid { grid-template-columns: repeat(2, 1fr); }
     }
-    .overview-card .value {
-        font-size: 32px;
-        font-weight: bold;
-        color: #2c3e50;
+    .stat-card {
+        background: var(--paper);
+        border: 1px solid var(--ink-200);
+        border-radius: var(--r-lg);
+        padding: 24px;
+        box-shadow: var(--shadow-sm);
     }
-    .overview-card .label {
-        font-size: 13px;
-        color: #666;
+    .stat-card .eyebrow {
+        font-size: 11px;
+        font-weight: 500;
+        color: var(--ink-600);
         text-transform: uppercase;
-        margin-top: 5px;
+        letter-spacing: 0.12em;
+        margin-bottom: 8px;
     }
-    .quarter-status {
+    .stat-card .stat-number {
+        font-size: 36px;
+        font-weight: 700;
+        color: var(--ink-900);
+        line-height: 1.1;
+        font-family: var(--font-display);
+        letter-spacing: -0.01em;
+    }
+    .stat-card .stat-sub {
+        font-size: 12px;
+        color: var(--ink-600);
+        margin-top: 4px;
+    }
+
+    .panel {
+        background: var(--paper);
+        border: 1px solid var(--ink-200);
+        border-radius: var(--r-lg);
+        padding: 24px;
+        box-shadow: var(--shadow-sm);
+        margin-bottom: 32px;
+    }
+    .panel h2 {
+        font-size: 16px;
+        font-weight: 700;
+        margin: 0 0 4px 0;
+    }
+    .panel .panel-sub {
+        font-size: 13px;
+        color: var(--ink-600);
+        margin-bottom: 16px;
+    }
+
+    .quarter-pills {
         display: flex;
-        gap: 15px;
-        justify-content: center;
+        gap: 12px;
         flex-wrap: wrap;
     }
-    .quarter-badge {
-        padding: 8px 16px;
-        border-radius: 20px;
+    .quarter-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 14px;
+        border-radius: 999px;
+        font-size: 13px;
         font-weight: 500;
-        font-size: 14px;
+        border: 1px solid transparent;
     }
-    .quarter-badge.has-data {
-        background: #d4edda;
-        color: #155724;
+    .quarter-pill .dot {
+        width: 8px; height: 8px; border-radius: 50%;
+        flex-shrink: 0;
     }
-    .quarter-badge.no-data {
-        background: #f8d7da;
-        color: #721c24;
+    .quarter-pill.has-data {
+        background: var(--success-tint);
+        color: #1B5E20;
+        border-color: #C8E2CA;
     }
+    .quarter-pill.has-data .dot { background: var(--success); }
+    .quarter-pill.no-data {
+        background: var(--ink-100);
+        color: var(--ink-600);
+        border-color: var(--ink-200);
+    }
+    .quarter-pill.no-data .dot { background: var(--ink-400); }
+
     .activity-breakdown {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-        gap: 10px;
-        margin-top: 15px;
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 8px;
+        margin-top: 16px;
     }
     .activity-item {
-        background: #f8f9fa;
-        padding: 10px;
-        border-radius: 5px;
-        text-align: center;
+        background: var(--ink-50);
+        border: 1px solid var(--ink-200);
+        padding: 12px;
+        border-radius: var(--r-md);
     }
     .activity-item .count {
-        font-size: 20px;
-        font-weight: bold;
-        color: #3498db;
+        font-size: 22px;
+        font-weight: 700;
+        color: var(--ink-900);
+        font-family: var(--font-display);
+        line-height: 1;
     }
     .activity-item .name {
         font-size: 11px;
-        color: #666;
+        color: var(--ink-600);
         text-transform: uppercase;
+        letter-spacing: 0.08em;
+        margin-top: 6px;
+    }
+
+    .review-card { padding: 24px; }
+    .review-card.is-active {
+        background: var(--paper);
+        position: relative;
+        color: var(--unmc-red);
+    }
+    .review-card-inner {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 24px;
+        flex-wrap: wrap;
+        color: var(--ink-800);
+    }
+    .review-card .review-title {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 18px;
+        font-weight: 700;
+        color: var(--ink-900);
+        margin-bottom: 8px;
+    }
+    .review-card .review-desc {
+        color: var(--ink-700);
+        font-size: 14px;
+        margin: 0;
+    }
+    .review-card .review-foot {
+        margin-top: 16px;
+        padding-top: 16px;
+        border-top: 1px solid var(--ink-200);
+    }
+
+    .quick-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 16px;
+    }
+    .quick-card {
+        background: var(--paper);
+        border: 1px solid var(--ink-200);
+        border-radius: var(--r-lg);
+        padding: 20px;
+        box-shadow: var(--shadow-sm);
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+    .quick-card h3 {
+        font-size: 15px;
+        margin: 0;
+        color: var(--ink-900);
+    }
+    .quick-card p {
+        color: var(--ink-700);
+        font-size: 13px;
+        margin: 0;
+        flex: 1;
+    }
+    .quick-card .quick-actions {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-top: 8px;
     }
 </style>
 {% endblock %}
 
 {% block content %}
 {% if academic_year %}
-<h2>Data Overview - AY {{ academic_year.year_code }}</h2>
-
-<div class="overview-grid">
-    <div class="overview-card">
-        <div class="value">{{ stats.total_faculty }}</div>
-        <div class="label">Total Faculty</div>
-    </div>
-    <div class="overview-card">
-        <div class="value">{{ stats.avc_eligible_faculty }}</div>
-        <div class="label">AVC Eligible</div>
-    </div>
-    <div class="overview-card">
-        <div class="value">{{ stats.faculty_with_data }}</div>
-        <div class="label">With Survey Data</div>
-    </div>
-    <div class="overview-card">
-        <div class="value">{{ stats.total_activities }}</div>
-        <div class="label">Total Activities</div>
+<div class="page-header">
+    <div>
+        <div class="page-eyebrow">Department snapshot</div>
+        <h1>Data Overview &mdash; AY {{ academic_year.year_code }}</h1>
+        <div class="page-subtitle">Faculty achievement metrics for the current academic year</div>
     </div>
 </div>
 
-<div class="card" style="margin-bottom: 25px;">
-    <h3>Quarter Coverage</h3>
-    <p style="color: #666; margin-bottom: 15px;">Number of faculty who have reported data for each quarter:</p>
-    <div class="quarter-status">
-        <span class="quarter-badge {% if stats.q1_q2 > 0 %}has-data{% else %}no-data{% endif %}">
-            Q1-Q2: {{ stats.q1_q2 }} faculty
+<div class="stat-grid">
+    <div class="stat-card">
+        <div class="eyebrow">Total Faculty</div>
+        <div class="stat-number">{{ stats.total_faculty }}</div>
+    </div>
+    <div class="stat-card">
+        <div class="eyebrow">AVC Eligible</div>
+        <div class="stat-number">{{ stats.avc_eligible_faculty }}</div>
+    </div>
+    <div class="stat-card">
+        <div class="eyebrow">With Survey Data</div>
+        <div class="stat-number">{{ stats.faculty_with_data }}</div>
+    </div>
+    <div class="stat-card">
+        <div class="eyebrow">Total Activities</div>
+        <div class="stat-number">{{ stats.total_activities }}</div>
+    </div>
+</div>
+
+<div class="panel">
+    <h2>Quarter coverage</h2>
+    <div class="panel-sub">Number of faculty who have reported data for each quarter.</div>
+
+    <div class="quarter-pills">
+        <span class="quarter-pill {% if stats.q1_q2 > 0 %}has-data{% else %}no-data{% endif %}">
+            <span class="dot"></span>
+            <strong>Q1&ndash;Q2:</strong>&nbsp;{{ stats.q1_q2 }} faculty
         </span>
-        <span class="quarter-badge {% if stats.q3 > 0 %}has-data{% else %}no-data{% endif %}">
-            Q3: {{ stats.q3 }} faculty
+        <span class="quarter-pill {% if stats.q3 > 0 %}has-data{% else %}no-data{% endif %}">
+            <span class="dot"></span>
+            <strong>Q3:</strong>&nbsp;{{ stats.q3 }} faculty
         </span>
-        <span class="quarter-badge {% if stats.q4 > 0 %}has-data{% else %}no-data{% endif %}">
-            Q4: {{ stats.q4 }} faculty
+        <span class="quarter-pill {% if stats.q4 > 0 %}has-data{% else %}no-data{% endif %}">
+            <span class="dot"></span>
+            <strong>Q4:</strong>&nbsp;{{ stats.q4 }} faculty
         </span>
     </div>
 
     {% if stats.activity_counts %}
-    <h4 style="margin-top: 20px;">Activities by Category</h4>
+    <h4 style="font-size:13px; font-weight:600; color: var(--ink-700); margin-top: 24px; text-transform:uppercase; letter-spacing:0.08em;">Activities by category</h4>
     <div class="activity-breakdown">
         {% for category, count in stats.activity_counts.items %}
         <div class="activity-item">
@@ -126,93 +252,116 @@
     {% endif %}
 </div>
 
-<!-- Review Mode Control -->
-<div class="card" style="margin-bottom: 25px; {% if academic_year.review_mode_enabled %}border: 2px solid #28a745;{% endif %}">
-    <div class="d-flex justify-content-between align-items-center">
-        <div>
-            <h3 style="margin: 0;">
-                <i class="bi bi-shield-check"></i> Division Chief Review Mode
-            </h3>
-            <p style="color: #666; margin: 10px 0 0 0;">
+<!-- Review Mode -->
+<div class="panel review-card {% if academic_year.review_mode_enabled %}is-active unmc-frames unmc-frames--red{% endif %}">
+    {% if academic_year.review_mode_enabled %}<span class="unmc-frames__corners"></span>{% endif %}
+    <div class="review-card-inner">
+        <div style="flex: 1; min-width: 280px;">
+            <div class="review-title">
+                <i class="bi bi-shield-check"></i>
+                Division chief review mode
                 {% if academic_year.review_mode_enabled %}
-                <span class="badge bg-success">ENABLED</span>
-                Division chiefs can review and verify faculty activities.
+                    <span class="badge bg-success" style="margin-left: 8px;">Enabled</span>
                 {% else %}
-                <span class="badge bg-secondary">DISABLED</span>
-                Enable after Q4 surveys close to allow division chiefs to review and verify.
+                    <span class="badge bg-secondary" style="margin-left: 8px;">Disabled</span>
+                {% endif %}
+            </div>
+            <p class="review-desc">
+                {% if academic_year.review_mode_enabled %}
+                    Division chiefs can review and verify faculty activities for this academic year.
+                {% else %}
+                    Enable after Q4 surveys close to allow division chiefs to review and verify activities.
                 {% endif %}
             </p>
         </div>
         <div>
-            <form method="post" action="{% url 'toggle_review_mode' %}">
+            <form method="post" action="{% url 'toggle_review_mode' %}" style="margin: 0;">
                 {% csrf_token %}
                 {% if academic_year.review_mode_enabled %}
-                <button type="submit" class="btn btn-outline-danger">
-                    <i class="bi bi-x-circle"></i> Disable Review Mode
+                <button type="submit" class="btn btn-outline-secondary">
+                    <i class="bi bi-x-circle"></i> Disable review mode
                 </button>
                 {% else %}
-                <button type="submit" class="btn btn-success">
-                    <i class="bi bi-check-circle"></i> Enable Review Mode
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-check-circle"></i> Enable review mode
                 </button>
                 {% endif %}
             </form>
         </div>
     </div>
     {% if academic_year.review_mode_enabled %}
-    <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #dee2e6;">
-        <a href="{% url 'divisions_list' %}" class="btn btn-outline-primary">
-            <i class="bi bi-diagram-3"></i> View Division Verification Status
+    <div class="review-foot">
+        <a href="{% url 'divisions_list' %}" class="u-btn u-btn--secondary">
+            <i class="bi bi-diagram-3"></i> View division verification status
         </a>
     </div>
     {% endif %}
 </div>
 {% endif %}
 
-<h2>Quick Actions</h2>
-
-<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin: 20px 0;">
-    <div class="card">
-        <h3>Faculty Roster</h3>
-        <p>Manage the department faculty list. Import from Faculty Calculator or add manually.</p>
-        <a href="{% url 'roster' %}" class="btn">View Roster</a>
-        <a href="{% url 'import_roster' %}" class="btn btn-secondary">Import CSV</a>
-    </div>
-
-    <div class="card">
-        <h3>Import Survey Data</h3>
-        <p>Upload REDCap export and match to faculty roster.</p>
-        <a href="{% url 'import_survey' %}" class="btn">Import Survey</a>
-        <a href="{% url 'import_history' %}" class="btn btn-secondary">History</a>
-    </div>
-
-    <div class="card">
-        <h3>Departmental Data</h3>
-        <p>Enter teaching awards, evaluations, and other department-tracked items.</p>
-        <a href="{% url 'departmental_data' %}" class="btn">Enter Data</a>
-    </div>
-
-    <div class="card">
-        <h3>Generate Reports</h3>
-        <p>Export points summaries and faculty reports with combined data.</p>
-        <a href="{% url 'reports_dashboard' %}" class="btn btn-success">Reports</a>
+<div class="page-header" style="margin-top: 24px;">
+    <div>
+        <div class="page-eyebrow">Get started</div>
+        <h1 style="font-size: 22px;">Quick actions</h1>
     </div>
 </div>
 
-<h2>Quick Upload (Session-Based)</h2>
-<div class="card">
-    <h3>One-Off CSV Processing</h3>
-    <p>For quick processing without saving to database. Data is session-only.</p>
+<div class="quick-grid">
+    <div class="quick-card">
+        <h3>Faculty roster</h3>
+        <p>Manage the department faculty list. Import from Faculty Calculator or add manually.</p>
+        <div class="quick-actions">
+            <a href="{% url 'roster' %}" class="u-btn u-btn--primary u-btn--sm">View roster</a>
+            <a href="{% url 'import_roster' %}" class="u-btn u-btn--secondary u-btn--sm">Import CSV</a>
+        </div>
+    </div>
 
+    <div class="quick-card">
+        <h3>Import survey data</h3>
+        <p>Upload REDCap export and match to faculty roster.</p>
+        <div class="quick-actions">
+            <a href="{% url 'import_survey' %}" class="u-btn u-btn--primary u-btn--sm">Import survey</a>
+            <a href="{% url 'import_history' %}" class="u-btn u-btn--secondary u-btn--sm">History</a>
+        </div>
+    </div>
+
+    <div class="quick-card">
+        <h3>Departmental data</h3>
+        <p>Enter teaching awards, evaluations, and other department-tracked items.</p>
+        <div class="quick-actions">
+            <a href="{% url 'departmental_data' %}" class="u-btn u-btn--primary u-btn--sm">Enter data</a>
+        </div>
+    </div>
+
+    <div class="quick-card">
+        <h3>Generate reports</h3>
+        <p>Export points summaries and faculty reports with combined data.</p>
+        <div class="quick-actions">
+            <a href="{% url 'reports_dashboard' %}" class="u-btn u-btn--primary u-btn--sm">Reports</a>
+        </div>
+    </div>
+</div>
+
+<div class="page-header" style="margin-top: 32px;">
+    <div>
+        <div class="page-eyebrow">Session-based</div>
+        <h1 style="font-size: 22px;">Quick upload</h1>
+        <div class="page-subtitle">For one-off CSV processing without saving to the database.</div>
+    </div>
+</div>
+
+<div class="panel">
     {% if has_data %}
-    <p><strong>You have session data loaded.</strong></p>
-    <a href="{% url 'select_export' %}" class="btn btn-success">Continue</a>
-    <a href="?clear=1" class="btn btn-secondary">Clear</a>
+    <p style="margin: 0 0 12px 0;"><strong>You have session data loaded.</strong></p>
+    <div style="display:flex; gap:8px;">
+        <a href="{% url 'select_export' %}" class="u-btn u-btn--primary">Continue</a>
+        <a href="?clear=1" class="u-btn u-btn--secondary">Clear</a>
+    </div>
     {% else %}
-    <form method="post" action="{% url 'upload_csv' %}" enctype="multipart/form-data">
+    <form method="post" action="{% url 'upload_csv' %}" enctype="multipart/form-data" style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
         {% csrf_token %}
-        <input type="file" name="csv_file" accept=".csv" required>
-        <br><br>
-        <button type="submit" class="btn btn-secondary">Quick Upload</button>
+        <input type="file" name="csv_file" accept=".csv" required class="form-control" style="max-width: 360px;">
+        <button type="submit" class="u-btn u-btn--secondary">Quick upload</button>
     </form>
     {% endif %}
 </div>
