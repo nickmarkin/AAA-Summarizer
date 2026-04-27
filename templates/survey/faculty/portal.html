@@ -176,10 +176,13 @@
         }
 
         @media (max-width: 640px) {
-            .hero-grid { flex-direction: column; }
-            .hero-right { text-align: left; }
+            .hero { padding: 24px; }
+            .hero-grid { flex-direction: column; gap: 16px; }
+            .hero-left { flex: 0 0 auto; }
+            .hero-right { flex: 0 0 auto; text-align: left; min-width: 0; }
             .hero-bars { justify-content: flex-start; }
             .hero-total { font-size: 44px; }
+            .hero h1 { font-size: 26px; }
         }
 
         /* Cards */

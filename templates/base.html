@@ -653,16 +653,88 @@
             .content-area { padding: 0; }
         }
 
+        /* ── Mobile branding (visible only at <= 768px) ── */
+        .mobile-brand {
+            display: none;
+            align-items: center;
+            gap: 8px;
+            min-width: 0;
+            overflow: hidden;
+        }
+        .mobile-brand img { height: 22px; width: auto; flex-shrink: 0; }
+        .mobile-brand-text { line-height: 1.1; min-width: 0; overflow: hidden; }
+        .mobile-brand-name {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--ink-900);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .mobile-brand-sub {
+            font-size: 9px;
+            color: var(--unmc-red);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .sidebar-toggle {
+            display: none;
+            background: transparent;
+            border: 1px solid var(--ink-300);
+            border-radius: var(--r-md);
+            color: var(--ink-700);
+            width: 36px;
+            height: 36px;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+        .sidebar-toggle:hover { background: var(--ink-50); color: var(--ink-900); }
+        .sidebar-backdrop {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(15,21,24,0.4);
+            z-index: 99;
+        }
+        .sidebar-backdrop.is-open { display: block; }
+
         /* ── Mobile reflow ────────────────────────── */
         @media (max-width: 768px) {
             .sidebar {
                 transform: translateX(-100%);
                 transition: transform 200ms ease;
+                box-shadow: var(--shadow-lg);
             }
             .sidebar.is-open { transform: translateX(0); }
             .main-content { margin-left: 0; }
-            .top-bar { padding: 0 16px; }
+            .top-bar { padding: 0 10px; gap: 6px; }
+            .top-bar .page-title,
+            .top-bar h4 { display: none; }
+            .top-bar form label { display: none; }
+            .top-bar form { gap: 0 !important; }
+            .top-bar .form-select-sm {
+                font-size: 11px;
+                padding: 4px 22px 4px 8px;
+                max-width: 90px;
+            }
+            /* Compact Help button on phone — icon only */
+            .top-bar .u-btn--ghost {
+                padding: 6px 8px;
+            }
+            .top-bar .u-btn--ghost .help-label { display: none; }
             .content-area { padding: 16px; }
+
+            .mobile-brand { display: flex; flex: 1; min-width: 0; }
+            .sidebar-toggle { display: inline-flex; }
+        }
+        @media (max-width: 380px) {
+            .mobile-brand-sub { display: none; }
         }
     </style>
 
@@ -754,17 +826,30 @@
         </div>
     </nav>
 
+    <!-- Backdrop for mobile sidebar -->
+    <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+
     <!-- Main Content -->
     <main class="main-content">
         <!-- Top Bar -->
         <div class="top-bar">
+            <button type="button" class="sidebar-toggle" id="sidebarToggle" aria-label="Open menu">
+                <i class="bi bi-list" style="font-size: 18px;"></i>
+            </button>
+            <div class="mobile-brand">
+                <img src="{% static 'images/unmc-logo.png' %}" alt="UNMC">
+                <div class="mobile-brand-text">
+                    <div class="mobile-brand-name">AAA Summarizer</div>
+                    <div class="mobile-brand-sub">UNMC Anesthesiology</div>
+                </div>
+            </div>
             <div>
                 <h4 class="page-title mb-0">{% block page_title %}{% endblock %}</h4>
             </div>
             <div class="d-flex align-items-center gap-3">
                 <!-- Help Button -->
                 <button type="button" class="u-btn u-btn--ghost u-btn--sm" data-bs-toggle="modal" data-bs-target="#helpModal" title="Help & Instructions">
-                    <i class="bi bi-question-circle"></i> Help
+                    <i class="bi bi-question-circle"></i><span class="help-label"> Help</span>
                 </button>
                 <!-- Year Selector -->
                 <form action="{% url 'select_year' %}" method="get" class="d-flex align-items-center gap-2">
@@ -1069,6 +1154,23 @@
         });
     </script>
     {% endif %}
+
+    <!-- Mobile sidebar toggle -->
+    <script>
+        (function () {
+            var toggle = document.getElementById('sidebarToggle');
+            var sidebar = document.querySelector('.sidebar');
+            var backdrop = document.getElementById('sidebarBackdrop');
+            if (!toggle || !sidebar || !backdrop) return;
+            function open()  { sidebar.classList.add('is-open');    backdrop.classList.add('is-open'); }
+            function close() { sidebar.classList.remove('is-open'); backdrop.classList.remove('is-open'); }
+            toggle.addEventListener('click', function () {
+                if (sidebar.classList.contains('is-open')) close(); else open();
+            });
+            backdrop.addEventListener('click', close);
+            sidebar.querySelectorAll('a.nav-link').forEach(function (a) { a.addEventListener('click', close); });
+        })();
+    </script>
 
     {% block scripts %}{% endblock %}
 </body>
