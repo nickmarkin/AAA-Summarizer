@@ -69,7 +69,7 @@ AAA Summarizer/
 ├── venv/                   # Python virtual environment
 ├── requirements.txt
 ├── manage.py
-├── VERSION                 # Version number (MAJOR.MINOR.DAY_OF_YEAR)
+├── VERSION                 # Version number (CalVer: YYYY.MM[.PATCH])
 ├── CHANGELOG.md            # Release history
 ├── DEPLOYMENT.md           # Full IT deployment guide
 ├── Dockerfile              # Docker container definition
@@ -80,24 +80,21 @@ AAA Summarizer/
 
 ## Versioning
 
-The app displays a version number in the sidebar footer: `2025 v1.2.30 (build a3f8b2c)`
+The app displays a version number in the sidebar footer: `v2026.04 (build a3f8b2c)`
 
-**Format:** `YEAR vMAJOR.MINOR.DAY_OF_YEAR (build HASH)`
-- **Year** - Auto-generated from current year
-- **Major/Minor** - Manually controlled, bump for significant changes
-- **Day of Year** - Day you made the update (Jan 30 = 30, Feb 15 = 46, etc.)
-- **Build hash** - Auto-generated from git commit
+**Format:** `vYYYY.MM[.PATCH] (build HASH)` — CalVer (Calendar Versioning)
+- **YYYY.MM** - Year and month of the release (e.g., `2026.04` for April 2026)
+- **PATCH** - Optional, only used when shipping more than once in the same month.
+  First release of the month is `2026.04` (no patch); a same-month follow-up is `2026.04.1`, then `2026.04.2`, etc.
+- **Build hash** - Auto-generated from `git rev-parse --short HEAD`
 
 **To update the version:**
-1. Edit the `VERSION` file in the project root
-2. Change to new version (e.g., `1.2.30` for a v1.2 update on day 30)
-3. Commit your changes - the git hash updates automatically
+1. Edit the `VERSION` file in the project root to the current `YYYY.MM` (or `YYYY.MM.N` for same-month follow-ups)
+2. Commit your changes — the git hash updates automatically
 
-**Day of year reference:**
-- Jan 30 = day 30
-- Feb 15 = day 46
-- Mar 1 = day 60 (or 61 in leap year)
-- Run `date +%j` in terminal to get today's day of year
+**Why CalVer:** This is an internal webapp with no external API to break, so SemVer's
+break/feature/fix signal isn't useful here. CalVer ("when did this ship?") is more
+informative and is the same scheme used across all of nick's webapps for consistency.
 
 **Version history:** See `CHANGELOG.md` for all releases
 

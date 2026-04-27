@@ -2,7 +2,17 @@
 
 All notable changes to the Academic Achievement Award Summarizer.
 
-Version format: `MAJOR.MINOR.DAY_OF_YEAR` (e.g., v1.2.30 = version 1.2, updated on day 30 of the year)
+Version format: `YYYY.MM[.PATCH]` — CalVer. First release of a month is `2026.04`;
+same-month follow-ups bump the optional patch (`2026.04.1`, `2026.04.2`, …).
+Earlier entries below use the legacy `MAJOR.MINOR.DAY_OF_YEAR` scheme.
+
+---
+
+## v2026.04 - 2026-04-27
+
+### Changed
+- Switched versioning scheme from `MAJOR.MINOR.DAY_OF_YEAR` to CalVer (`YYYY.MM[.PATCH]`)
+  for consistency across all internal webapps. Sidebar now displays `v2026.04 (build <sha>)`.
 
 ---
 

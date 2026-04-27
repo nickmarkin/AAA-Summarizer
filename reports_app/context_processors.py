@@ -14,17 +14,16 @@ from .models import AcademicYear
 
 def get_app_version():
     """
-    Read version from VERSION file and git commit hash.
+    Read CalVer version from VERSION file and git commit hash.
 
     Returns dict with:
-    - version: The full version string (e.g., "1.0.30")
+    - version: The version string (e.g., "2026.04" or "2026.04.1")
     - git_hash: Short git commit hash (e.g., "a3f8b2c")
-    - display: Formatted display string (e.g., "v1.0.30 (build a3f8b2c)")
+    - display: Formatted display string (e.g., "v2026.04 (build a3f8b2c)")
     """
     version = "0.0.0"
     git_hash = None
 
-    # Read VERSION file
     version_file = settings.BASE_DIR / 'VERSION'
     if version_file.exists():
         try:
@@ -32,7 +31,6 @@ def get_app_version():
         except Exception:
             pass
 
-    # Get git commit hash
     try:
         result = subprocess.run(
             ['git', 'rev-parse', '--short', 'HEAD'],
@@ -46,14 +44,10 @@ def get_app_version():
     except Exception:
         pass
 
-    # Build display string with year
-    from datetime import datetime
-    year = datetime.now().year
-
     if git_hash:
-        display = f"{year} v{version} (build {git_hash})"
+        display = f"v{version} (build {git_hash})"
     else:
-        display = f"{year} v{version}"
+        display = f"v{version}"
 
     return {
         'version': version,
