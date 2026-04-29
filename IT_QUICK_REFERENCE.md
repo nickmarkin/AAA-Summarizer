@@ -7,22 +7,44 @@
 
 ---
 
-## Fix 1: UNMC Logo Not Showing
+## Updating the App (every time, including the first time after this change)
 
-The logo and other static files need to be collected after deployment/updates.
+**Run one command from the server:**
 
+```bash
+cd /opt/academic-achievement && ./update.sh
+```
+
+`update.sh` does everything in the right order and verifies the result:
+1. `git pull` from GitHub
+2. `pip install -r requirements.txt`
+3. `python manage.py migrate`
+4. `python manage.py collectstatic --noinput`  ← the step that fixes missing logos / unstyled pages
+5. `sudo systemctl restart academic-achievement`
+6. Sanity-checks that the service came back up and that `staticfiles/` is populated
+
+If any step fails, the script stops and prints what went wrong. **Do not run `git pull` by itself** — it will skip `collectstatic` and the site will render with no CSS/images (see "Symptom" below).
+
+### Symptom: site loads but everything is unstyled / no logo
+
+This means `collectstatic` was not run after the last code update. Fix:
+
+```bash
+cd /opt/academic-achievement && ./update.sh
+```
+
+Or, if you want to do it manually:
 ```bash
 cd /opt/academic-achievement
 source venv/bin/activate
 python manage.py collectstatic --noinput
+sudo systemctl restart academic-achievement
 ```
 
 **Verify it worked:**
 ```bash
 ls -la /opt/academic-achievement/staticfiles/images/unmc-logo.png
 ```
-
-**Note:** Run `collectstatic` after every code update.
 
 ---
 
@@ -137,29 +159,6 @@ sudo systemctl restart nginx
 
 # Check status
 sudo systemctl status academic-achievement
-```
-
----
-
-## After Code Updates
-
-Always run these commands after pulling new code:
-
-```bash
-cd /opt/academic-achievement
-source venv/bin/activate
-
-# Update dependencies (if requirements.txt changed)
-pip install -r requirements.txt
-
-# Run database migrations
-python manage.py migrate
-
-# Collect static files (images, CSS, JS)
-python manage.py collectstatic --noinput
-
-# Restart the app
-sudo systemctl restart academic-achievement
 ```
 
 ---

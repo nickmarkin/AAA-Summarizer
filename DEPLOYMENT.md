@@ -391,12 +391,22 @@ Verify SITE_URL is set correctly in `.env`:
 
 ### Updating the Application
 
+**Recommended (one command):**
+
+```bash
+cd /opt/academic-achievement && ./update.sh
+```
+
+`update.sh` performs the full update sequence (pull, deps, migrate, collectstatic, restart) and verifies the service came back up and `staticfiles/` is populated. Use this for every update — it cannot accidentally skip `collectstatic`, which is the most common cause of a deployed site rendering with no CSS or images.
+
+**Manual equivalent (if you need to do it step-by-step):**
+
 ```bash
 cd /opt/academic-achievement
 source venv/bin/activate
 
-# Pull new code or copy new files
-git pull  # or copy updated files
+# Pull new code
+git pull --ff-only
 
 # Update dependencies
 pip install -r requirements.txt
